@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+    <metadata>
+        <id>knockout.google.maps</id>
+        <version>0.1.0</version>
+        <title>Knockout bindings for Google Maps</title>
+        <authors>Manuel Guilbault</authors>
+        <owners />
+        <requireLicenseAcceptance>false</requireLicenseAcceptance>
+        <description>Knockout JS bindings for Google Maps V3 JavaScript API.</description>
+        <language>en-CA</language>
+        <tags>knockout ko google maps</tags>
+        <dependencies>
+            <dependency id="knockoutjs" version="2.2.1" />
+        </dependencies>
+    </metadata>
+    <files>
+        <file src="..\knockout.google.maps.js" target="Scripts\knockout.google.maps.js" />
+        <file src="..\knockout.google.maps.markerClusterer.js" target="Scripts\knockout.google.maps.markerClusterer.js" />
+    </files>
+</package>

@@ -1,0 +1,9 @@
+﻿knockoutGoogleMapDebugCallback([
+    'src/namespace.js',
+    'src/utils.js',
+    'src/bindings/map.js',
+    'src/bindings/mapItems.js',
+    'src/bindings/marker.js',
+    'src/bindings/infoWindow.js',
+    'src/bindings/utility/markerClusterer.js'
+]);

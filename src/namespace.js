@@ -1,0 +1,3 @@
+﻿ko.google = {
+    maps: { }
+};

@@ -6,7 +6,8 @@
     <script type="text/javascript" src="knockout-2.2.1.debug.js"></script>
     <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB6ChJAKL_3nL20JRFio8W0mPlhiJigbww&sensor=true"></script>
     <script type="text/javascript" src="markerclusterer.js"></script>
-    <script type="text/javascript" src="../build/include-all.js"></script>
+    <!--<script type="text/javascript" src="../build/include-all.js"></script>-->
+    <script type="text/javascript" src="../dist/knockout.google.maps-0.1.0.debug.js"></script>
 </head>
 <body style="width:1200px;height:600px;">
     <table style="width:100%;height:100%;">
@@ -14,8 +15,8 @@
             <tr>
                 <td>
                     <div style="width:100%;height:100%;" data-bind="map: $data">
+                        <!-- ko marker: currentLocation --><!-- /ko -->
                         <!-- ko clusterer: { styles: styles } -->
-                            <!-- ko marker: currentLocation --><!-- /ko -->
                             <!-- ko mapItems: pins -->
                                 <!-- ko marker: $data -->
                                     <div data-bind="infoWindow: { anchor: $marker, visible: hintVisible }">

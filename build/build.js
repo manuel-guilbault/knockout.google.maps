@@ -1,5 +1,7 @@
 var fs = require('fs'),
-    path = require('path');
+    path = require('path'),
+    http = require('http'),
+    querystring = require('querystring');
 
 var versionPlaceholder = '##VERSION##',
     versionHeaderFile = 'fragments/version-header.js',
@@ -55,6 +57,42 @@ function getOutputFile(template, version) {
     return path.join(__dirname, template.replace(versionPlaceholder, version));
 }
 
+function minify(source, callback) {
+    var postData = querystring.stringify({
+        js_code: source,
+        compilation_level: 'ADVANCED_OPTIMIZATIONS',
+        output_info: 'compiled_code',
+        output_format: 'text'
+    });
+    var options = {
+        host: 'closure-compiler.appspot.com',
+        port: '80',
+        path: '/compile',
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Content-Length': postData.length
+        }
+    };
+    var request = http.request(options, function (response) {
+        var result = '';
+        response.setEncoding('utf8');
+        response.on('data', function (chunk) {
+            console.log('Received chunk: ' + chunk);
+            result += chunk;
+        });
+        response.on('end', function () {
+            console.log('Response received.');
+            callback(result);
+        });
+    });
+    request.on('error', function (error) {
+        console.log(error);
+    });
+    request.write(postData);
+    request.end();
+}
+
 var version = require('./tools/version');
 
 var sourcesFiles = loadSourceReferences();
@@ -63,5 +101,6 @@ var source = buildSource(sourcesFiles, version);
 
 fs.writeFileSync(getOutputFile(outputDebugFile, version), source);
 
-//TODO minify source
-fs.writeFileSync(getOutputFile(outputFile, version), source);
+//minify(source, function (source) {
+//    fs.writeFileSync(getOutputFile(outputFile, version), source);
+//});

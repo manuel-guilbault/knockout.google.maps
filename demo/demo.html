@@ -76,7 +76,7 @@
             return Math.floor(Math.random() * 360) - 180;
         }
 
-        function Pin() {
+        function Pin(owner) {
             this.latitude = ko.observable(randomLatitude());
             this.longitude = ko.observable(randomLongitude());
 
@@ -106,13 +106,10 @@
             });
 
             this.hintVisible = ko.observable(false);
+            this.click = function () {
+                owner.selectedPin(this);
+            }
         }
-
-        var currentLocation = new Pin();
-        currentLocation.visible(false);
-        currentLocation.title('Current location');
-        currentLocation.draggable(false);
-        currentLocation.icon('current.png');
 
         var styles = [
             {
@@ -190,26 +187,35 @@
             }
         ];
 
-        var viewModel = {
-            center: ko.observable({ latitude: 48.8567, longitude: 2.3508 }),
-            panCenter: ko.observable(true),
-            zoom: ko.observable(8),
-            mapTypeId: ko.observable(google.maps.MapTypeId.ROADMAP),
-            bounds: ko.observable(),
-            panBounds: ko.observable(true),
+        function ViewModel() {
 
-            currentLocation: ko.observable(currentLocation),
-            pins: ko.observableArray([]),
-            selectedPin: ko.observable(null),
+            function createCurrentLocation(owner) {
+                var currentLocation = new Pin(owner);
+                currentLocation.visible(false);
+                currentLocation.title('Current location');
+                currentLocation.draggable(false);
+                currentLocation.icon('current.png');
+                return currentLocation;
+            }
 
-            pinIndex: 1,
-            newPin: function () {
-                var pin = new Pin();
-                pin.title('New pin ' + this.pinIndex++);
+            this.center = ko.observable({ latitude: 48.8567, longitude: 2.3508 });
+            this.panCenter = ko.observable(true);
+            this.zoom = ko.observable(8);
+            this.mapTypeId = ko.observable(google.maps.MapTypeId.ROADMAP);
+            this.bounds = ko.observable();
+            this.panBounds = ko.observable(true);
+
+            this.pins = ko.observableArray([]);
+            this.selectedPin = ko.observable(null);
+
+            var pinIndex = 1;
+            this.newPin = function () {
+                var pin = new Pin(this);
+                pin.title('New pin ' + pinIndex++);
                 this.pins.push(pin);
                 this.selectedPin(pin);
-            },
-            removePin: function (pin) {
+            };
+            this.removePin = function (pin) {
                 var index = this.pins.indexOf(pin);
                 if (index == -1) return;
 
@@ -221,34 +227,37 @@
                 } else {
                     this.selectedPin(null);
                 }
-            },
+            };
 
-            availableStyles: ko.observableArray(styles),
-            selectedStyles: ko.observable(styles[0])
-        };
-        viewModel.styles = ko.computed(function () {
-            return this.selectedStyles().styles;
-        }, viewModel);
-        viewModel.selectedPin.subscribe(function () {
-            if (this.oldSelectedPin) {
-                this.oldSelectedPin.hintVisible(false);
-            }
-            var selectedPin = viewModel.selectedPin();
-            if (selectedPin) {
-                viewModel.center(selectedPin.position());
-                selectedPin.hintVisible(true);
-            }
-            this.oldSelectedPin = selectedPin;
-        });
+            this.availableStyles = ko.observableArray(styles);
+            this.selectedStyles = ko.observable(styles[0]);
 
+            this.currentLocation = ko.observable(createCurrentLocation(this));
+            this.styles = ko.computed(function () {
+                return this.selectedStyles().styles;
+            }, this);
+            this.selectedPin.subscribe(function () {
+                if (this.oldSelectedPin) {
+                    this.oldSelectedPin.hintVisible(false);
+                }
+                var selectedPin = viewModel.selectedPin();
+                if (selectedPin) {
+                    viewModel.center(selectedPin.position());
+                    selectedPin.hintVisible(true);
+                }
+                this.oldSelectedPin = selectedPin;
+            });
+        }
+
+        var viewModel = new ViewModel();
         ko.applyBindings(viewModel);
 
         navigator.geolocation.getCurrentPosition(function (position) {
-            currentLocation.position({
+            viewModel.currentLocation().position({
                 latitude: position.coords.latitude,
                 longitude: position.coords.longitude
             });
-            currentLocation.visible(true);
+            viewModel.currentLocation().visible(true);
         });
     </script>
 </body>

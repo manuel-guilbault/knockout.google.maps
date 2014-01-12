@@ -27,8 +27,8 @@
 	binders: {
 		center: {
 		    onBuildOptions: function (bindingContext, bindings, options, ko) {
-		        ko.google.maps.utils.assignBindingToOptions(bindings, 'center', options, null, ko.google.maps.utils.positionToGoogleMaps);
-		        ko.google.maps.utils.assignBindingToOptions(bindings, 'panCenter', options, true, ko.google.maps.utils.castBoolean);
+		        ko.google.maps.utils.assignBindingToOptions(bindings, 'center', options);
+		        ko.google.maps.utils.assignBindingToOptions(bindings, 'panCenter', options, true, function (v) { return !!v; });
 		    },
 		    onCreated: function (bindingContext, bindings, map, ko) {
 		        if (ko.isObservable(bindings.center)) {
@@ -36,7 +36,7 @@
 		            google.maps.event.addListener(map, 'center_changed', function () {
 		                if (!isUpdatingCenter) {
 		                    isUpdatingCenter = true;
-		                    bindings.center(ko.google.maps.utils.positionFromGoogleMaps(map.getCenter()));
+		                    bindings.center(map.getCenter());
 		                    isUpdatingCenter = false;
 		                }
 		            });
@@ -45,9 +45,9 @@
 
 		                isUpdatingCenter = true;
 		                if (ko.utils.unwrapObservable(bindings.panCenter)) {
-		                    map.panTo(ko.google.maps.utils.positionToGoogleMaps(bindings.center()));
+		                    map.panTo(bindings.center());
 		                } else {
-		                    map.setCenter(ko.google.maps.utils.positionToGoogleMaps(bindings.center()));
+		                    map.setCenter(bindings.center());
 		                }
 		                isUpdatingCenter = false;
 		            });
@@ -74,30 +74,26 @@
 		        ko.google.maps.utils.assignBindingToOptions(bindings, 'mapTypeId', options, google.maps.MapTypeId.ROADMAP);
 		    },
 		    onCreated: function (bindingContext, bindings, map, ko) {
-		        if (ko.isObservable(bindings.mapTypeId)) {
-		            bindings.mapTypeId.subscribe(function () {
-		                map.setMapTypeId(bindings.mapTypeId());
-		            });
-		        }
+		        ko.google.maps.utils.tryObserveBinding(bindings, 'mapTypeId', function (v) { map.setMapTypeId(v); });
 		    }
 		},
 		bounds: {
 		    onBuildOptions: function (bindingContext, bindings, options, ko) {
-		        ko.google.maps.utils.assignBindingToOptions(bindings, 'bounds', options, null, ko.google.maps.utils.boundsToGoogleMaps);
-		        ko.google.maps.utils.assignBindingToOptions(bindings, 'panBounds', options, true, ko.google.maps.utils.castBoolean);
+		        ko.google.maps.utils.assignBindingToOptions(bindings, 'bounds', options);
+		        ko.google.maps.utils.assignBindingToOptions(bindings, 'panBounds', options, true, function (v) { return !!v; });
 		    },
 		    onCreated: function (bindingContext, bindings, map, ko) {
 		        if (ko.isObservable(bindings.bounds)) {
 		            var isUpdatingBounds = false;
 		            google.maps.event.addListenerOnce(map, 'idle', function () {
 		                isUpdatingBounds = true;
-		                bindings.bounds(ko.google.maps.utils.boundsFromGoogleMaps(map.getBounds()));
+		                bindings.bounds(map.getBounds());
 		                isUpdatingBounds = false;
 		            });
 		            google.maps.event.addListener(map, 'bounds_changed', function () {
 		                if (!isUpdatingBounds) {
 		                    isUpdatingBounds = true;
-		                    bindings.bounds(ko.google.maps.utils.boundsFromGoogleMaps(map.getBounds()));
+		                    bindings.bounds(map.getBounds());
 		                    isUpdatingBounds = false;
 		                }
 		            });
@@ -106,9 +102,9 @@
 
 		                isUpdatingBounds = true;
 		                if (ko.utils.unwrapObservable(bindings.bounds)) {
-		                    map.panToBounds(ko.google.maps.utils.boundsToGoogleMaps(bindings.bounds()));
+		                    map.panToBounds(bindings.bounds());
 		                } else {
-		                    map.fitBounds(ko.google.maps.utils.boundsToGoogleMaps(bindings.bounds()));
+		                    map.fitBounds(bindings.bounds());
 		                }
 		                isUpdatingBounds = false;
 		            });
@@ -117,21 +113,19 @@
 		},
 		backgroundColor: {
 		    onBuildOptions: function (bindingContext, bindings, options, ko) {
-		        ko.google.maps.utils.assignBindingToOptions(bindings, 'backgroundColor', options, null);
+		        ko.google.maps.utils.assignBindingToOptions(bindings, 'backgroundColor', options);
 		    }
 		},
 		//disableDefaultUI,
 		//disableDoubleClickZoom,
 		draggable: {
 		    onBuildOptions: function (bindingContext, bindings, options, ko) {
-		        ko.google.maps.utils.assignBindingToOptions(bindings, 'draggable', options, null);
+		        ko.google.maps.utils.assignBindingToOptions(bindings, 'draggable', options);
 		    },
 		    onCreated: function (bindingContext, bindings, map, ko) {
-		        if (ko.isObservable(bindings.draggable)) {
-		            bindings.draggable.subscribe(function () {
-		                map.setOptions({ draggable: ko.google.maps.utils.castBoolean(bindings.draggable()) });
-		            });
-		        }
+		        ko.google.maps.utils.tryObserveBinding(bindings, 'draggable', function (value) {
+		            map.setOptions({ draggable: !!value });
+		        });
 		    }
 		},
 		//draggableCursor,

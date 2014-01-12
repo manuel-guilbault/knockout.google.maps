@@ -8,7 +8,7 @@ function getClusterer(bindings, bindingContext) {
 ko.bindingHandlers.clusterer = {
     init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
 		if (bindingContext.$map === undefined) {
-			throw 'marker binding must be used only inside the scope of a map binding.';
+			throw 'clusterer binding must be used only inside the scope of a map binding.';
 		}
 
 		var bindings = ko.utils.unwrapObservable(valueAccessor());
@@ -44,7 +44,7 @@ ko.bindingHandlers.clusterer = {
 				ko.google.maps.utils.assignBindingToOptions(bindings, 'gridSize', options, null);
 			},
 			onCreated: function (bindingContext, bindings, clusterer, ko) {
-			    ko.google.maps.utils.tryObserveBindingForSetter(bindings, 'gridSize', clusterer, 'setGridSize');
+			    ko.google.maps.utils.tryObserveBinding(bindings, 'gridSize', function (v) { clusterer.setGridSize(v); });
 			}
 		},
 		maxZoom: {
@@ -52,7 +52,7 @@ ko.bindingHandlers.clusterer = {
 				ko.google.maps.utils.assignBindingToOptions(bindings, 'maxZoom', options, null);
 			},
 			onCreated: function (bindingContext, bindings, clusterer, ko) {
-			    ko.google.maps.utils.tryObserveBindingForSetter(bindings, 'maxZoom', clusterer, 'setMaxZoom');
+			    ko.google.maps.utils.tryObserveBinding(bindings, 'maxZoom', function (v) { clusterer.setMaxZoom(v); });
 			}
 		},
 		styles: {
@@ -60,13 +60,11 @@ ko.bindingHandlers.clusterer = {
 				ko.google.maps.utils.assignBindingToOptions(bindings, 'styles', options, null);
 			},
 			onCreated: function (bindingContext, bindings, clusterer, ko) {
-				if (ko.isObservable(bindings.styles)) {
-					bindings.styles.subscribe(function () {
-						clusterer.setStyles(bindings.styles());
-						clusterer.resetViewport();
-						clusterer.redraw();
-					});
-				}
+			    ko.google.maps.utils.tryObserveBinding(bindings, 'styles', function (v) {
+			        clusterer.setStyles(v);
+			        clusterer.resetViewport();
+			        clusterer.redraw();
+			    });
 			}
 		}
 	}

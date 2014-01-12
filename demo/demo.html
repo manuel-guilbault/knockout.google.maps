@@ -14,17 +14,17 @@
         <tbody>
             <tr>
                 <td>
-                    <div style="width:100%;height:100%;" data-bind="map: $data">
-                        <!-- ko marker: currentLocation --><!-- /ko -->
-                        <!-- ko clusterer: { styles: styles } -->
-                            <!-- ko mapItems: pins -->
-                                <!-- ko marker: $data -->
+                    <div data-bind="map: $data" style="width:100%;height:100%;">
+                        <div data-bind="marker: currentLocation"></div>
+                        <div data-bind="clusterer: { styles: styles }">
+                            <div data-bind="mapItems: pins">
+                                <div data-bind="marker: $data">
                                     <div data-bind="infoWindow: { anchor: $marker, visible: hintVisible }">
                                         <p data-bind="text: title"></p>
                                     </div>
-                                <!-- /ko -->
-                            <!-- /ko -->
-                        <!-- /ko -->
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </td>
                 <td style="width:350px;vertical-align:top;">
@@ -35,7 +35,7 @@
                     <fieldset>
                         <legend>Locations</legend>
                         <button data-bind="click: newPin">New location</button>
-                        <select size="1" data-bind="options: pins, optionsText: function(pin) { return '[' + pin.position().latitude.toFixed(2) + ', ' + pin.position().longitude.toFixed(2) + '] ' + pin.title(); }, value: selectedPin"></select>
+                        <select size="1" data-bind="options: pins, optionsText: function(pin) { return '[' + pin.position().lat().toFixed(2) + ', ' + pin.position().lng().toFixed(2) + '] ' + pin.title(); }, value: selectedPin"></select>
                         <div data-bind="with: selectedPin">
                             <input type="text" data-bind="value: title, valueUpdate: 'afterkeydown'" />
                             <button data-bind="click: function() { $parent.removePin($data); }">Remove</button>
@@ -46,18 +46,18 @@
             <tr style="height:50px;">
                 <td colspan="2">
                     <span>
-                        Center: [<span data-bind="text: center().latitude.toFixed(4)"></span>, <span data-bind="text: center().longitude.toFixed(4)"></span>]
+                        Center: [<span data-bind="text: center().lat().toFixed(4)"></span>, <span data-bind="text: center().lng().toFixed(4)"></span>]
                     </span>
                     <span>
                         Zoom: <span data-bind="text: zoom"></span>
                     </span>
                     <span data-bind="if: bounds">
-                        Bounds: [<span data-bind="text: bounds().southWest.latitude.toFixed(4)"></span>, <span data-bind="text: bounds().southWest.longitude.toFixed(4)"></span>]
-                        to [<span data-bind="text: bounds().northEast.latitude.toFixed(4)"></span>, <span data-bind="text: bounds().northEast.longitude.toFixed(4)"></span>]
+                        Bounds: [<span data-bind="text: bounds().getSouthWest().lat().toFixed(4)"></span>, <span data-bind="text: bounds().getSouthWest().lng().toFixed(4)"></span>]
+                        to [<span data-bind="text: bounds().getNorthEast().lat().toFixed(4)"></span>, <span data-bind="text: bounds().getNorthEast().lng().toFixed(4)"></span>]
                     </span>
                     <span data-bind="with: currentLocation">
                         <span data-bind="if: visible">
-                            Current location: [<span data-bind="text: position().latitude.toFixed(4)"></span>, <span data-bind="text: position().longitude.toFixed(4)"></span>]
+                            Current location: [<span data-bind="text: position().lat().toFixed(4)"></span>, <span data-bind="text: position().lng().toFixed(4)"></span>]
                         </span>
                         <span data-bind="ifnot: visible">Current location undefined</span>
                     </span>
@@ -93,14 +93,11 @@
 
             this.position = ko.computed({
                 read: function () {
-                    return {
-                        latitude: this.latitude(),
-                        longitude: this.longitude()
-                    };
+                    return new google.maps.LatLng(this.latitude(), this.longitude());
                 },
                 write: function (value) {
-                    this.latitude(value.latitude);
-                    this.longitude(value.longitude);
+                    this.latitude(value.lat());
+                    this.longitude(value.lng());
                 },
                 owner: this
             });
@@ -198,7 +195,7 @@
                 return currentLocation;
             }
 
-            this.center = ko.observable({ latitude: 48.8567, longitude: 2.3508 });
+            this.center = ko.observable(new google.maps.LatLng(48.8567, 2.3508));
             this.panCenter = ko.observable(true);
             this.zoom = ko.observable(8);
             this.mapTypeId = ko.observable(google.maps.MapTypeId.ROADMAP);
@@ -253,10 +250,7 @@
         ko.applyBindings(viewModel);
 
         navigator.geolocation.getCurrentPosition(function (position) {
-            viewModel.currentLocation().position({
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude
-            });
+            viewModel.currentLocation().position(new google.maps.LatLng(position.coords.latitude, position.coords.longitude));
             viewModel.currentLocation().visible(true);
         });
     </script>

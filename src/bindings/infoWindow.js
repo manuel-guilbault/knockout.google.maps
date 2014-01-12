@@ -64,14 +64,12 @@
 	    },
 	    disableAutoPan: {
 	        onBuildOptions: function (bindingContext, bindings, options, ko) {
-	            ko.google.maps.utils.assignBindingToOptions(bindings, 'disableAutoPan', options, false, ko.google.maps.utils.castBoolean);
+	            ko.google.maps.utils.assignBindingToOptions(bindings, 'disableAutoPan', options, false, function (v) { return !!v; });
 	        },
 	        onCreated: function (bindingContext, bindings, infoWindow, ko) {
-	            if (ko.isObservable(bindings.disableAutoPan)) {
-	                bindings.disableAutoPan.subscribe(function () {
-	                    infoWindow.setOptions({ disableAutoPan: ko.google.maps.utils.castBoolean(bindings.disableAutoPan()) });
-	                });
-	            }
+	            ko.google.maps.utils.tryObserveBinding(bindings, 'disableAutoPan', function (v) {
+	                infoWindow.setOptions({ disableAutoPan: !!v });
+	            });
 	        }
 	    },
 	    maxWidth: {
@@ -79,35 +77,27 @@
 	            ko.google.maps.utils.assignBindingToOptions(bindings, 'maxWidth', options, 0);
 	        },
 	        onCreated: function (bindingContext, bindings, infoWindow, ko) {
-	            if (ko.isObservable(bindings.maxWidth)) {
-	                bindings.maxWidth.subscribe(function () {
-	                    infoWindow.setOptions({ maxWidth: bindings.maxWidth() });
-	                });
-	            }
+	            ko.google.maps.utils.tryObserveBinding(bindings, 'maxWidth', function (v) {
+	                infoWindow.setOptions({ maxWidth: v });
+	            });
 	        }
 	    },
 	    pixelOffset: {
 	        onBuildOptions: function (bindingContext, bindings, options, ko) {
-	            ko.google.maps.utils.assignBindingToOptions(bindings, 'pixelOffset', options, { width: 0, height: 0 }, ko.google.maps.utils.sizeToGoogleMaps);
+	            ko.google.maps.utils.assignBindingToOptions(bindings, 'pixelOffset', options, new google.maps.Size(0, 0));
 	        },
 	        onCreated: function (bindingContext, bindings, infoWindow, ko) {
-	            if (ko.isObservable(bindings.pixelOffset)) {
-	                bindings.pixelOffset.subscribe(function () {
-	                    infoWindow.setOptions({ pixelOffset: ko.google.maps.utils.sizeToGoogleMaps(bindings.pixelOffset()) });
-	                });
-	            }
+	            ko.google.maps.utils.tryObserveBinding(bindings, 'pixelOffset', function (v) {
+	                infoWindow.setOptions({ pixelOffset: v });
+	            });
 	        }
 	    },
 	    position: {
 	        onBuildOptions: function (bindingContext, bindings, options, ko) {
-	            ko.google.maps.utils.assignBindingToOptions(bindings, 'position', options, null, ko.google.maps.utils.positionToGoogleMaps);
+	            ko.google.maps.utils.assignBindingToOptions(bindings, 'position', options);
 	        },
 	        onCreated: function (bindingContext, bindings, infoWindow, ko) {
-	            if (ko.isObservable(bindings.position)) {
-	                bindings.position.subscribe(function () {
-	                    infoWindow.setPosition(ko.google.maps.utils.positionToGoogleMaps(bindings.position()));
-	                });
-	            }
+	            ko.google.maps.utils.tryObserveBinding(bindings, 'position', function (v) { infoWindow.setPosition(v); });
 	        }
 	    }
 	}

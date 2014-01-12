@@ -1,4 +1,3 @@
-build/knockout.google.maps.nuspec
 dist/knockout.google.maps.*.nupkg
 node_modules
 web-server.js

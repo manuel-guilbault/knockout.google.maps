@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
     <metadata>
         <id>knockout.google.maps</id>
-        <version>$version$</version>
+        <version>0.1.0</version>
         <title>Knockout bindings for Google Maps</title>
         <authors>Manuel Guilbault</authors>
         <owners />
@@ -15,7 +15,6 @@
         </dependencies>
     </metadata>
     <files>
-        <file src="..\dist\knockout.google.maps-$version$.debug.js" target="Scripts\knockout.google.maps-$version$.debug.js" />
-        <file src="..\dist\knockout.google.maps-$version$.js" target="Scripts\knockout.google.maps-$version$.js" />
+        <file src="dist\*.js" target="content\Scripts" />
     </files>
 </package>

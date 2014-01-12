@@ -1,3 +1,2 @@
-dist/knockout.google.maps.*.nupkg
+*.nupkg
 node_modules
-web-server.js

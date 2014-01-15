@@ -74,11 +74,15 @@ ko.google.maps.utils = {
         });
     };
 
+    ko.google.maps.Subscriptions.prototype.clear = function () {
+        this.handlers = [];
+    };
+
     ko.google.maps.Subscriptions.prototype.dispose = function () {
         for (var i = 0; i < this.handlers.length; ++i) {
             this.handlers[i]();
         }
-        this.handlers = [];
+        this.clear();
     };
 })();
 (function () {

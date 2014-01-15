@@ -86,6 +86,10 @@
             createOptions: 'visible',
             bindings: { name: 'visible', vmToObj: { setter: 'setVisible' } }
         },
+        zIndex: {
+            createOptions: 'zIndex',
+            bindings: { name: 'zIndex', vmToObj: { setter: 'setZIndex' } }
+        },
         click: {
             events: 'click'
         },

@@ -53,6 +53,19 @@
                 }
             }
         },
+        panToSelfWhenShown: {
+            bind: function (bindingContext, bindings, infoWindow, subscriptions) {
+                if (ko.isObservable(bindings.visible)) {
+                    subscriptions.addKOSubscription(bindings.visible.subscribe(function (visible) {
+                        if (ko.utils.unwrapObservable(bindings.panToSelfWhenShown) && visible) {
+                            infoWindow.panToSelf();
+                        }
+                    }));
+                } else if (ko.utils.unwrapObservable(bindings.panToSelfWhenShown) && ko.utils.unwrapObservable(bindings.visible)) {
+                    infoWindow.panToSelf();
+                }
+            }
+        },
         disableAutoPan: {
             createOptions: 'disableAutoPan',
             bindings: 'disableAutoPan'
@@ -68,6 +81,15 @@
         position: {
             createOptions: 'position',
             bindings: { name: 'position', vmToObj: { setter: 'setPosition' } }
+        },
+        alignBottom: {
+            createOptions: 'alignBottom'
+        },
+        boxClass: {
+            createOptions: 'boxClass'
+        },
+        infoBoxClearance: {
+            createOptions: 'boxClass'
         }
     }
 };

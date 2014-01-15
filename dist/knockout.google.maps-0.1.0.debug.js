@@ -115,26 +115,21 @@ ko.google.maps.utils = {
         return options;
     }
 
-    function applyGetter(obj, getter, args) {
+    function applyGetter(obj, getter) {
         if (typeof getter === 'function') {
-            return getter.apply(obj, args || []);
+            return getter.apply(obj, []);
         } else if (typeof getter === 'string') {
-            return obj[getter].apply(obj, args || []);
+            return obj[getter].apply(obj, []);
         } else {
             throw new TypeError('Invalid getter');
         }
     }
 
-    function applySetter(obj, setter, args) {
-        if (args && !ko.google.maps.utils.isArray(args)) {
-            args = [args];
-        }
+    function applySetter(obj, setter, value) {
         if (typeof setter === 'function') {
-            var params = args ? args.slice(0) : [];
-            params.unshift(obj);
-            return setter.apply(undefined, params);
+            return setter.apply(undefined, [obj, value]);
         } else if (typeof setter === 'string') {
-            return obj[setter].apply(obj, args || []);
+            return obj[setter].apply(obj, [value]);
         } else {
             throw new TypeError('Invalid setter');
         }

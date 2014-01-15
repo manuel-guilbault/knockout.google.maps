@@ -130,7 +130,9 @@ ko.google.maps.utils = {
             args = [args];
         }
         if (typeof setter === 'function') {
-            return setter.apply(obj, args || []);
+            var params = args ? args.slice(0) : [];
+            params.unshift(obj);
+            return setter.apply(undefined, params);
         } else if (typeof setter === 'string') {
             return obj[setter].apply(obj, args || []);
         } else {
@@ -577,7 +579,7 @@ ko.bindingHandlers.marker = {
         },
         visible: {
             createOptions: 'visible',
-            bindings: { name: 'visible', vmToObj: { setter: function (v) { this.setVisible(v); } } }
+            bindings: { name: 'visible', vmToObj: { setter: 'setVisible' } }
         },
         click: {
             events: 'click'

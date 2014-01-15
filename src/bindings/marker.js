@@ -84,7 +84,7 @@
         },
         visible: {
             createOptions: 'visible',
-            bindings: { name: 'visible', vmToObj: { setter: function (v) { this.setVisible(v); } } }
+            bindings: { name: 'visible', vmToObj: { setter: 'setVisible' } }
         },
         click: {
             events: 'click'

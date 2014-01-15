@@ -116,12 +116,6 @@
         }
     }
 
-    function doBind(bindingContext, bindings, obj, subscriptions, callbacks) {
-        if (callbacks && !ko.google.maps.utils.isArray(callbacks)) {
-            callbacks = [callbacks];
-        }
-    }
-
     function bind(bindingContext, bindings, obj, subscriptions, binders) {
         for (var key in binders) {
             var binder = binders[key];

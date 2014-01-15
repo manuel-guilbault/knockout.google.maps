@@ -1,132 +1,103 @@
 ﻿ko.bindingHandlers.map = {
     init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
-        var elementCopy = element.cloneNode(true);
         var bindings = ko.utils.unwrapObservable(valueAccessor());
 
-        var options = {};
-        for (var property in ko.bindingHandlers.map.binders) {
-            var binder = ko.bindingHandlers.map.binders[property];
-            if (binder.onBuildOptions) {
-                binder.onBuildOptions(bindingContext, bindings, options, ko);
-            }
-        }
+        // Take copy of map element (because the google.maps.Map constructor will remove all children when creating the map).
+        var elementCopy = element.cloneNode(true);
 
+        var options = ko.google.maps.binder.getCreateOptions(bindingContext, bindings, ko.bindingHandlers.map.binders);
         var map = new google.maps.Map(element, options);
-        for (var property in ko.bindingHandlers.map.binders) {
-            var binder = ko.bindingHandlers.map.binders[property];
-            if (binder.onCreated) {
-                binder.onCreated(bindingContext, bindings, map, ko);
-            }
-        }
 
-        var innerBindingContext = bindingContext.extend({ $map: map });
-        ko.applyBindingsToDescendants(innerBindingContext, elementCopy);
+        var subscriptions = new ko.google.maps.Subscriptions();
+        ko.google.maps.binder.bind(bindingContext, bindings, map, subscriptions, ko.bindingHandlers.map.binders);
+
+        var childBindingContext = bindingContext.extend({ $map: map, $subscriptions: subscriptions });
+        ko.applyBindingsToDescendants(childBindingContext, elementCopy);
+
+        ko.utils.domNodeDisposal.addDisposeCallback(element, function () {
+            // Clear all subscriptions.
+            subscriptions.dispose();
+
+            // Clean element copy (so child bindings that added a disposeCallback on it are disposed).
+            ko.utils.domNodeDisposal.cleanNode(elementCopy);
+        });
 
         return { controlsDescendantBindings: true };
     },
     binders: {
         center: {
-            onBuildOptions: function (bindingContext, bindings, options, ko) {
-                ko.google.maps.utils.assignBindingToOptions(bindings, 'center', options);
-                ko.google.maps.utils.assignBindingToOptions(bindings, 'panCenter', options, true, function (v) { return !!v; });
-            },
-            onCreated: function (bindingContext, bindings, map, ko) {
-                if (ko.isObservable(bindings.center)) {
-                    var isUpdatingCenter = false;
-                    google.maps.event.addListener(map, 'center_changed', function () {
-                        if (!isUpdatingCenter) {
-                            isUpdatingCenter = true;
-                            bindings.center(map.getCenter());
-                            isUpdatingCenter = false;
-                        }
-                    });
-                    bindings.center.subscribe(function () {
-                        if (isUpdatingCenter) return;
+            createOptions: 'center',
+            bind: function (bindingContext, bindings, map, subscriptions) {
+                if (!ko.isObservable(bindings.center)) return;
 
+                var isUpdatingCenter = false;
+                subscriptions.addGMListener(google.maps.event.addListener(map, 'center_changed', function () {
+                    if (!isUpdatingCenter) {
                         isUpdatingCenter = true;
-                        if (ko.utils.unwrapObservable(bindings.panCenter)) {
-                            map.panTo(bindings.center());
-                        } else {
-                            map.setCenter(bindings.center());
-                        }
+                        bindings.center(map.getCenter());
                         isUpdatingCenter = false;
-                    });
-                }
+                    }
+                }));
+                subscriptions.addKOSubscription(bindings.center.subscribe(function () {
+                    if (isUpdatingCenter) return;
+
+                    isUpdatingCenter = true;
+                    if (ko.utils.unwrapObservable(bindings.panCenter)) {
+                        map.panTo(bindings.center());
+                    } else {
+                        map.setCenter(bindings.center());
+                    }
+                    isUpdatingCenter = false;
+                }));
             }
         },
         zoom: {
-            onBuildOptions: function (bindingContext, bindings, options, ko) {
-                ko.google.maps.utils.assignBindingToOptions(bindings, 'zoom', options, 8);
-            },
-            onCreated: function (bindingContext, bindings, map, ko) {
-                if (ko.isObservable(bindings.zoom)) {
-                    google.maps.event.addListener(map, 'zoom_changed', function () {
-                        bindings.zoom(map.getZoom());
-                    });
-                    bindings.zoom.subscribe(function () {
-                        map.setZoom(bindings.zoom());
-                    });
-                }
-            }
+            createOptions: { name: 'zoom', defaultValue: 8 },
+            bindings: { name: 'zoom', objToVM: { event: 'zoom_changed', getter: 'getZoom' }, vmToObj: { setter: 'setZoom' } }
         },
         mapTypeId: {
-            onBuildOptions: function (bindingContext, bindings, options, ko) {
-                ko.google.maps.utils.assignBindingToOptions(bindings, 'mapTypeId', options, google.maps.MapTypeId.ROADMAP);
-            },
-            onCreated: function (bindingContext, bindings, map, ko) {
-                ko.google.maps.utils.tryObserveBinding(bindings, 'mapTypeId', function (v) { map.setMapTypeId(v); });
-            }
+            createOptions: 'mapTypeId',
+            bindings: { name: 'mapTypeId', vmToObj: { setter: 'setMapTypeId' } }
         },
         bounds: {
-            onBuildOptions: function (bindingContext, bindings, options, ko) {
-                ko.google.maps.utils.assignBindingToOptions(bindings, 'bounds', options);
-                ko.google.maps.utils.assignBindingToOptions(bindings, 'panBounds', options, true, function (v) { return !!v; });
-            },
-            onCreated: function (bindingContext, bindings, map, ko) {
-                if (ko.isObservable(bindings.bounds)) {
-                    var isUpdatingBounds = false;
-                    google.maps.event.addListenerOnce(map, 'idle', function () {
-                        isUpdatingBounds = true;
-                        bindings.bounds(map.getBounds());
-                        isUpdatingBounds = false;
-                    });
-                    google.maps.event.addListener(map, 'bounds_changed', function () {
-                        if (!isUpdatingBounds) {
-                            isUpdatingBounds = true;
-                            bindings.bounds(map.getBounds());
-                            isUpdatingBounds = false;
-                        }
-                    });
-                    bindings.bounds.subscribe(function () {
-                        if (isUpdatingBounds) return;
+            createOptions: 'bounds',
+            bind: function (bindingContext, bindings, map, subscriptions) {
+                if (!ko.isObservable(bindings.bounds)) return;
 
-                        isUpdatingBounds = true;
-                        if (ko.utils.unwrapObservable(bindings.bounds)) {
-                            map.panToBounds(bindings.bounds());
-                        } else {
-                            map.fitBounds(bindings.bounds());
-                        }
-                        isUpdatingBounds = false;
-                    });
-                }
+                var isUpdatingBounds = false;
+                subscriptions.addGMListener(google.maps.event.addListenerOnce(map, 'idle', function () {
+                    isUpdatingBounds = true;
+                    bindings.bounds(map.getBounds());
+                    isUpdatingBounds = false;
+                }));
+                subscriptions.addGMListener(google.maps.event.addListener(map, 'bounds_changed', function () {
+                    if (isUpdatingBounds) return;
+
+                    isUpdatingBounds = true;
+                    bindings.bounds(map.getBounds());
+                    isUpdatingBounds = false;
+                }));
+                subscriptions.addKOSubscription(bindings.bounds.subscribe(function () {
+                    if (isUpdatingBounds) return;
+
+                    isUpdatingBounds = true;
+                    if (ko.utils.unwrapObservable(bindings.panBounds)) {
+                        map.panToBounds(bindings.bounds());
+                    } else {
+                        map.fitBounds(bindings.bounds());
+                    }
+                    isUpdatingBounds = false;
+                }));
             }
         },
         backgroundColor: {
-            onBuildOptions: function (bindingContext, bindings, options, ko) {
-                ko.google.maps.utils.assignBindingToOptions(bindings, 'backgroundColor', options);
-            }
+            createOptions: 'backgroundColor'
         },
         //disableDefaultUI,
         //disableDoubleClickZoom,
         draggable: {
-            onBuildOptions: function (bindingContext, bindings, options, ko) {
-                ko.google.maps.utils.assignBindingToOptions(bindings, 'draggable', options);
-            },
-            onCreated: function (bindingContext, bindings, map, ko) {
-                ko.google.maps.utils.tryObserveBinding(bindings, 'draggable', function (value) {
-                    map.setOptions({ draggable: !!value });
-                });
-            }
+            createOptions: 'draggable',
+            bindings: 'draggable'
         },
         //draggableCursor,
         //draggingCursor,
@@ -135,8 +106,14 @@
         //mapMaker,
         //mapTypeControl,
         //mapTypeControlOptions,
-        //maxZoom,
-        //minZoom,
+        maxZoom: {
+            createOptions: 'maxZoom',
+            bindings: 'draggable'
+        },
+        minZoom: {
+            createOptions: 'minZoom',
+            bindings: 'minZoom'
+        },
         //overviewMapControl,
         //overviewMapControlOptions,
         //panControl,
@@ -153,5 +130,11 @@
         //tilt,
         //zoomControl,
         //zoomControlOptions
+        dragend: {
+            events: 'dragend'
+        },
+        idle: {
+            events: 'idle'
+        }
     }
 };

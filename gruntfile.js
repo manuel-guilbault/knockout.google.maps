@@ -1,5 +1,4 @@
 ﻿module.exports = function (grunt) {
-
     function execCmd(cmd, args, done) {
         grunt.util.spawn({
             cmd: cmd,
@@ -27,6 +26,8 @@
                     "build/header.js",
                     "src/namespace.js",
                     "src/utils.js",
+                    "src/subscriptions.js",
+                    "src/binder.js",
                     "src/bindings/*.js",
                     "build/footer.js"
                 ],

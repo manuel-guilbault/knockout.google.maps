@@ -6,185 +6,106 @@
 
         var bindings = ko.utils.unwrapObservable(valueAccessor());
 
-        var options = {};
-        for (var property in ko.bindingHandlers.marker.binders) {
-            var binder = ko.bindingHandlers.marker.binders[property];
-            if (binder.onBuildOptions) {
-                binder.onBuildOptions(bindingContext, bindings, options, ko);
-            }
-        }
+        var options = ko.google.maps.binder.getCreateOptions(bindingContext, bindings, ko.bindingHandlers.marker.binders);
         options.map = bindingContext.$map;
-
         var marker = new google.maps.Marker(options);
-        for (var property in ko.bindingHandlers.marker.binders) {
-            var binder = ko.bindingHandlers.marker.binders[property];
-            if (binder.onCreated) {
-                binder.onCreated(bindingContext, bindings, marker, ko);
-            }
-        }
 
-        if (bindingContext.removeHandlers) {
-            bindingContext.removeHandlers.push(function (viewModel) {
-                for (var property in ko.bindingHandlers.marker.binders) {
-                    var binder = ko.bindingHandlers.marker.binders[property];
-                    if (binder.onRemoved) {
-                        binder.onRemoved(bindingContext, bindings, viewModel, marker, ko);
-                    }
-                }
-                marker.setMap(null);
-            });
-        }
+        var subscriptions = new ko.google.maps.Subscriptions();
+        ko.google.maps.binder.bind(bindingContext, bindings, marker, subscriptions, ko.bindingHandlers.marker.binders);
 
-        var innerBindingContext = bindingContext.extend({ $marker: marker });
-        ko.applyBindingsToDescendants(innerBindingContext, element);
+        var childBindingContext = bindingContext.extend({ $marker: marker, $subscriptions: subscriptions });
+        ko.applyBindingsToDescendants(childBindingContext, element);
+
+        var parentSubscriptions = bindingContext.$subscriptions;
+        parentSubscriptions.add(function () {
+            subscriptions.dispose();
+            marker.setMap(null);
+        });
 
         return { controlsDescendantBindings: true };
     },
     binders: {
         animation: {
-            onBuildOptions: function (bindingContext, bindings, options, ko) {
-                ko.google.maps.utils.assignBindingToOptions(bindings, 'animation', options);
-            },
-            onCreated: function (bindingContext, bindings, marker, ko) {
-                ko.google.maps.utils.tryObserveBinding(bindings, 'animation', function (v) { marker.setAnimation(v); });
-            },
-            onRemoved: function (bindingContext, bindings, viewModel, marker, ko) {
-            }
+            createOptions: 'animation',
+            bindings: { name: 'animation', vmToObj: { setter: 'setAnimation' } }
         },
         clickable: {
-            onBuildOptions: function (bindingContext, bindings, options, ko) {
-                ko.google.maps.utils.assignBindingToOptions(bindings, 'clickable', options, true, function (v) { return !!v; });
-            },
-            onCreated: function (bindingContext, bindings, marker, ko) {
-                ko.google.maps.utils.tryObserveBinding(bindings, 'clickable', function (v) { marker.setClickable(!!v); });
-            }
+            createOptions: 'clickable',
+            bindings: { name: 'clickable', vmToObj: { setter: 'setClickable' } }
         },
         cursor: {
-            onBuildOptions: function (bindingContext, bindings, options, ko) {
-                ko.google.maps.utils.assignBindingToOptions(bindings, 'cursor', options);
-            },
-            onCreated: function (bindingContext, bindings, marker, ko) {
-                ko.google.maps.utils.tryObserveBinding(bindings, 'cursor', function (v) { marker.setCursor(v); });
-            }
+            createOptions: 'cursor',
+            bindings: { name: 'cursor', vmToObj: { setter: 'setCursor' } }
         },
         icon: {
-            onBuildOptions: function (bindingContext, bindings, options, ko) {
-                ko.google.maps.utils.assignBindingToOptions(bindings, 'icon', options);
-            },
-            onCreated: function (bindingContext, bindings, marker, ko) {
-                ko.google.maps.utils.tryObserveBinding(bindings, 'icon', function (v) { marker.setIcon(v); });
-            }
+            createOptions: 'icon',
+            bindings: { name: 'icon', vmToObj: { setter: 'setIcon' } }
         },
         raiseOnDrag: {
-            onBuildOptions: function (bindingContext, bindings, options, ko) {
-                ko.google.maps.utils.assignBindingToOptions(bindings, 'raiseOnDrag', options, true, function (v) { return !!v; });
-            }
+            createOptions: 'raiseOnDrag'
         },
         shadow: {
-            onBuildOptions: function (bindingContext, bindings, options, ko) {
-                ko.google.maps.utils.assignBindingToOptions(bindings, 'shadow', options);
-            },
-            onCreated: function (bindingContext, bindings, marker, ko) {
-                ko.google.maps.utils.tryObserveBinding(bindings, 'shadow', function (v) { marker.setShadow(v); });
-            }
+            createOptions: 'shadow',
+            bindings: { name: 'shadow', vmToObj: { setter: 'setShadow' } }
         },
         position: {
-            onBuildOptions: function (bindingContext, bindings, options, ko) {
-                ko.google.maps.utils.assignBindingToOptions(bindings, 'position', options);
-            },
-            onCreated: function (bindingContext, bindings, marker, ko) {
-                if (ko.isObservable(bindings.position)) {
-                    var isUpdatingPosition = false;
-                    bindings.position.subscribe(function () {
-                        if (isUpdatingPosition) return;
-                        isUpdatingPosition = true;
-                        marker.setPosition(bindings.position());
-                        isUpdatingPosition = false;
-                    });
-                    if (bindings.positionUpdateOnDragEnd) {
-                        google.maps.event.addListener(marker, 'dragend', function () {
-                            if (isUpdatingPosition) return;
-                            isUpdatingPosition = true;
-                            bindings.position(marker.getPosition());
-                            isUpdatingPosition = false;
-                        });
-                    } else {
-                        google.maps.event.addListener(marker, 'position_changed', function () {
-                            if (isUpdatingPosition) return;
-                            isUpdatingPosition = true;
-                            bindings.position(marker.getPosition());
-                            isUpdatingPosition = false;
-                        });
-                    }
-                }
+            createOptions: 'position',
+            bind: function (bindingContext, bindings, marker, subscriptions) {
+                if (!ko.isObservable(bindings.position)) return;
+
+                var isUpdatingPosition = false;
+                subscriptions.addKOSubscription(bindings.position.subscribe(function () {
+                    if (isUpdatingPosition) return;
+                    isUpdatingPosition = true;
+                    marker.setPosition(bindings.position());
+                    isUpdatingPosition = false;
+                }));
+
+                var positionChangedEvent = ko.utils.unwrapObservable(bindings.positionUpdateOnDragEnd) ? 'dragend' : 'position_changed';
+                subscriptions.addGMListener(google.maps.event.addListener(marker, positionChangedEvent, function () {
+                    if (isUpdatingPosition) return;
+                    isUpdatingPosition = true;
+                    bindings.position(marker.getPosition());
+                    isUpdatingPosition = false;
+                }));
             }
         },
         draggable: {
-            onBuildOptions: function (bindingContext, bindings, options, ko) {
-                ko.google.maps.utils.assignBindingToOptions(bindings, 'draggable', options, false, function (v) { return !!v; });
-            },
-            onCreated: function (bindingContext, bindings, marker, ko) {
-                ko.google.maps.utils.tryObserveBinding(bindings, 'draggable', function (v) { marker.setDraggable(!!v); });
-            }
+            createOptions: 'draggable',
+            bindings: { name: 'draggable', vmToObj: { setter: 'setDraggable' } }
         },
         flat: {
-            onBuildOptions: function (bindingContext, bindings, options, ko) {
-                ko.google.maps.utils.assignBindingToOptions(bindings, 'flat', options, false, function (v) { return !!v; });
-            },
-            onCreated: function (bindingContext, bindings, marker, ko) {
-                ko.google.maps.utils.tryObserveBinding(bindings, 'flat', function (v) { marker.setFlat(!!v); });
-            }
+            createOptions: 'flat',
+            bindings: { name: 'flat', vmToObj: { setter: 'setFlat' } }
         },
         title: {
-            onBuildOptions: function (bindingContext, bindings, options, ko) {
-                ko.google.maps.utils.assignBindingToOptions(bindings, 'title', options, '');
-            },
-            onCreated: function (bindingContext, bindings, marker, ko) {
-                ko.google.maps.utils.tryObserveBinding(bindings, 'title', function (v) { marker.setTitle(v); });
-            }
+            createOptions: 'title',
+            bindings: { name: 'title', vmToObj: { setter: 'setTitle' } }
         },
         visible: {
-            onBuildOptions: function (bindingContext, bindings, options, ko) {
-                ko.google.maps.utils.assignBindingToOptions(bindings, 'visible', options, true, function (v) { return !!v; });
-            },
-            onCreated: function (bindingContext, bindings, marker, ko) {
-                ko.google.maps.utils.tryObserveBinding(bindings, 'visible', function (v) { marker.setVisible(!!v); });
-            }
+            createOptions: 'visible',
+            bindings: { name: 'visible', vmToObj: { setter: function (v) { this.setVisible(v); } } }
         },
         click: {
-            onCreated: function (bindingContext, bindings, marker, ko) {
-                ko.google.maps.utils.tryRegisterMouseEvent(bindingContext, bindings, 'click', marker);
-            }
+            events: 'click'
         },
         doubleclick: {
-            onCreated: function (bindingContext, bindings, marker, ko) {
-                ko.google.maps.utils.tryRegisterMouseEvent(bindingContext, bindings, 'dblclick', marker);
-            }
+            events: 'dblclick'
         },
         rightclick: {
-            onCreated: function (bindingContext, bindings, marker, ko) {
-                ko.google.maps.utils.tryRegisterMouseEvent(bindingContext, bindings, 'rightclick', marker);
-            }
+            events: 'rightclick'
         },
         mousedown: {
-            onCreated: function (bindingContext, bindings, marker, ko) {
-                ko.google.maps.utils.tryRegisterMouseEvent(bindingContext, bindings, 'mousedown', marker);
-            }
+            events: 'mousedown'
         },
         mouseout: {
-            onCreated: function (bindingContext, bindings, marker, ko) {
-                ko.google.maps.utils.tryRegisterMouseEvent(bindingContext, bindings, 'mouseout', marker);
-            }
+            events: 'mouseout'
         },
         mouseover: {
-            onCreated: function (bindingContext, bindings, marker, ko) {
-                ko.google.maps.utils.tryRegisterMouseEvent(bindingContext, bindings, 'mouseover', marker);
-            }
+            events: 'mouseover'
         },
         mouseup: {
-            onCreated: function (bindingContext, bindings, marker, ko) {
-                ko.google.maps.utils.tryRegisterMouseEvent(bindingContext, bindings, 'mouseup', marker);
-            }
+            events: 'mouseup'
         }
     }
 };

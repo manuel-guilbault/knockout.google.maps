@@ -1,5 +1,4 @@
 ﻿ko.google.maps.utils = {
-
     /*
     Evaluate a property from a binding object and assign it to an option object.
     Use a default value if the property is not defined on the binding object.
@@ -17,21 +16,7 @@
         options[property] = value;
     },
 
-    /*
-    Try to observe a property of a bindings object.
-    */
-    tryObserveBinding: function (bindings, property, handler) {
-        if (ko.isObservable(bindings[property])) {
-            bindings[property].subscribe(handler);
-        }
-    },
-
-    // Try to register a given mouse event on a given target.
-    tryRegisterMouseEvent: function (bindingContext, bindings, bindingName, target, eventName) {
-        if (typeof bindings[bindingName] === 'function') {
-            google.maps.event.addListener(target, eventName || bindingName, function (event) {
-                bindings[bindingName](event);
-            });
-        }
+    isArray: function (obj) {
+        return Object.prototype.toString.call(obj) === '[object Array]';
     }
 };

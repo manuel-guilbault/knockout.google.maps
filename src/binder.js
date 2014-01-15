@@ -47,7 +47,9 @@
             args = [args];
         }
         if (typeof setter === 'function') {
-            return setter.apply(obj, args || []);
+            var params = args ? args.slice(0) : [];
+            params.unshift(obj);
+            return setter.apply(undefined, params);
         } else if (typeof setter === 'string') {
             return obj[setter].apply(obj, args || []);
         } else {
@@ -111,6 +113,12 @@
 
         for (var i = 0; i < events.length; ++i) {
             registerEvent(bindingContext, bindings, obj, subscriptions, events[i]);
+        }
+    }
+
+    function doBind(bindingContext, bindings, obj, subscriptions, callbacks) {
+        if (callbacks && !ko.google.maps.utils.isArray(callbacks)) {
+            callbacks = [callbacks];
         }
     }
 

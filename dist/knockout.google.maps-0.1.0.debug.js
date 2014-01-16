@@ -1,5 +1,5 @@
 /*
-*   knockout.google.maps 0.1.0 (2014-01-15)
+*   knockout.google.maps 0.1.0 (2014-01-16)
 *   Created by Manuel Guilbault (https://github.com/manuel-guilbault)
 *
 *   Source: https://github.com/manuel-guilbault/knockout.google.maps
@@ -23,14 +23,43 @@
 ko.google = {
     maps: { }
 };
-ko.google.maps.utils = {
+(function () {
+    var typeConverters = {
+        bool: {
+            convertObjToVM: function (value) {
+                return !!value;
+            },
+            convertVMToObj: function (value) {
+                return !!value;
+            }
+        }
+    };
+
+    function convertObjToVM(value, type) {
+        if (!type) return value;
+
+        var converter = typeConverters[type];
+        if (!converter) return value;
+
+        return converter.convertObjToVM(value);
+    }
+
+    function convertVMToObj(value, type) {
+        if (!type) return value;
+
+        var converter = typeConverters[type];
+        if (!converter) return value;
+
+        return converter.convertVMToObj(value);
+    }
+
     /*
-    Evaluate a property from a binding object and assign it to an option object.
-    Use a default value if the property is not defined on the binding object.
-    If a transform function is passed, the value is transformed before it is assigned to
-    the option objects.
+        Evaluate a property from a binding object and assign it to an option object.
+        Use a default value if the property is not defined on the binding object.
+        If a transform function is passed, the value is transformed before it is assigned to
+        the option objects.
     */
-    assignBindingToOptions: function (bindings, property, options, defaultValue, transform) {
+    function assignBindingToOptions(bindings, property, options, defaultValue, transform) {
         var value = ko.utils.unwrapObservable(bindings[property]);
         if (value === undefined) {
             value = defaultValue;
@@ -39,12 +68,20 @@ ko.google.maps.utils = {
             value = transform(value);
         }
         options[property] = value;
-    },
+    }
 
-    isArray: function (obj) {
+    function isArray(obj) {
         return Object.prototype.toString.call(obj) === '[object Array]';
     }
-};
+
+    ko.google.maps.utils = {
+        typeConverters: typeConverters,
+        convertObjToVM: convertObjToVM,
+        convertVMToObj: convertVMToObj,
+        assignBindingToOptions: assignBindingToOptions,
+        isArray: isArray
+    };
+})();
 (function () {
     ko.google.maps.Subscriptions = function () {
         this.handlers = [];
@@ -88,9 +125,13 @@ ko.google.maps.utils = {
 (function () {
     function applyCreateOptions(bindingContext, bindings, options, definition) {
         if (typeof definition === 'string') {
-            ko.google.maps.utils.assignBindingToOptions(bindings, definition, options);
+            ko.google.maps.utils.assignBindingToOptions(bindings, definition, options, undefined, function (value) {
+                return value === undefined ? undefined : ko.google.maps.utils.convertVMToObj(value, definition.type);
+            });
         } else if (typeof definition === 'object') {
-            ko.google.maps.utils.assignBindingToOptions(bindings, definition.name, options, definition.defaultValue, definition.transform);
+            ko.google.maps.utils.assignBindingToOptions(bindings, definition.name, options, definition.defaultValue, definition.transform || function (value) {
+                return value === undefined ? undefined : ko.google.maps.utils.convertVMToObj(value, definition.type);
+            });
         } else if (typeof definition === 'function') {
             definition(bindingContext, bindings, options);
         } else {
@@ -152,12 +193,12 @@ ko.google.maps.utils = {
 
         if (definition.vmToObj.setter) {
             subscriptions.addKOSubscription(bindings[definition.name].subscribe(function (value) {
-                applySetter(obj, definition.vmToObj.setter, value);
+                applySetter(obj, definition.vmToObj.setter, ko.google.maps.utils.convertVMToObj(value, definition.type));
             }));
         } else if (typeof obj.setOptions === 'function' && !definition.vmToObj.noOptions) {
             subscriptions.addKOSubscription(bindings[definition.name].subscribe(function (value) {
                 var options = {};
-                options[definition.vmToObj.option || definition.name] = value;
+                options[definition.vmToObj.option || definition.name] = ko.google.maps.utils.convertVMToObj(value, definition.type);
                 obj.setOptions(options);
             }));
         }
@@ -165,6 +206,7 @@ ko.google.maps.utils = {
         if (definition.objToVM) {
             subscriptions.addGMListener(google.maps.event.addListener(obj, definition.objToVM.event, function () {
                 var value = applyGetter(obj, definition.objToVM.getter);
+                value = ko.google.maps.utils.convertObjToVM(value, definition.type);
                 bindings[definition.name](value);
             }));
         }
@@ -184,7 +226,7 @@ ko.google.maps.utils = {
         if (typeof bindings[event] !== 'function') return;
 
         subscriptions.addGMListener(google.maps.event.addListener(obj, event, function (e) {
-            bindings[event](e);
+            bindings[event](bindingContext.$data, e);
         }));
     }
 
@@ -243,7 +285,7 @@ ko.google.maps.utils = {
 
             var options = ko.google.maps.binder.getCreateOptions(bindingContext, bindings, ko.bindingHandlers.directions.binders);
             var directionsRenderer = new google.maps.DirectionsRenderer(options);
-            
+
             var subscriptions = new ko.google.maps.Subscriptions();
             ko.google.maps.binder.bind(bindingContext, bindings, directionsRenderer, subscriptions, ko.bindingHandlers.directions.binders);
 
@@ -265,7 +307,7 @@ ko.google.maps.utils = {
         },
         binders: {
             draggable: {
-                createOptions: 'draggable'
+                createOptions: { name: 'draggable', type: 'bool' }
             },
             //hideRouteList
             //infoWindow
@@ -275,20 +317,20 @@ ko.google.maps.utils = {
             //preserveViewport
             //routeIndex
             suppressBicyclingLayer: {
-                createOptions: 'suppressBicyclingLayer',
-                bindings: 'suppressBicyclingLayer'
+                createOptions: { name: 'suppressBicyclingLayer', type: 'bool' },
+                bindings: { name: 'suppressBicyclingLayer', type: 'bool' }
             },
             suppressMarkers: {
-                createOptions: 'suppressMarkers',
-                bindings: 'suppressMarkers'
+                createOptions: { name: 'suppressMarkers', type: 'bool' },
+                bindings: { name: 'suppressMarkers', type: 'bool' }
             },
             suppressInfoWindows: {
-                createOptions: 'suppressInfoWindows',
-                bindings: 'suppressInfoWindows'
+                createOptions: { name: 'suppressInfoWindows', type: 'bool' },
+                bindings: { name: 'suppressInfoWindows', type: 'bool' }
             },
             suppressPolylines: {
-                createOptions: 'suppressPolylines',
-                bindings: 'suppressPolylines'
+                createOptions: { name: 'suppressPolylines', type: 'bool' },
+                bindings: { name: 'suppressPolylines', type: 'bool' }
             }
         }
     };
@@ -339,7 +381,7 @@ ko.bindingHandlers.infoWindow = {
                         } else if (!isOpen && isShowing) {
                             infoWindow.open(bindingContext.$map, ko.utils.unwrapObservable(bindings.anchor));
                         }
-                        ko.utils.domData.set(infoWindow, 'isOpen', isShowing);
+                        ko.utils.domData.set(infoWindow, 'isOpen', !!isShowing);
                     }));
                     subscriptions.addGMListener(google.maps.event.addListener(infoWindow, 'closeclick', function () {
                         ko.utils.domData.set(infoWindow, 'isOpen', false);
@@ -362,8 +404,8 @@ ko.bindingHandlers.infoWindow = {
             }
         },
         disableAutoPan: {
-            createOptions: 'disableAutoPan',
-            bindings: 'disableAutoPan'
+            createOptions: { name: 'disableAutoPan', type: 'bool' },
+            bindings: { name: 'disableAutoPan', type: 'bool' }
         },
         maxWidth: {
             createOptions: { name: 'maxWidth', defaultValue: 0 },
@@ -376,15 +418,6 @@ ko.bindingHandlers.infoWindow = {
         position: {
             createOptions: 'position',
             bindings: { name: 'position', vmToObj: { setter: 'setPosition' } }
-        },
-        alignBottom: {
-            createOptions: 'alignBottom'
-        },
-        boxClass: {
-            createOptions: 'boxClass'
-        },
-        infoBoxClearance: {
-            createOptions: 'boxClass'
         }
     }
 };
@@ -486,8 +519,8 @@ ko.bindingHandlers.map = {
         //disableDefaultUI,
         //disableDoubleClickZoom,
         draggable: {
-            createOptions: 'draggable',
-            bindings: 'draggable'
+            createOptions: { name: 'draggable', type: 'bool' },
+            bindings: { name: 'draggable', type: 'bool' }
         },
         //draggableCursor,
         //draggingCursor,
@@ -498,7 +531,7 @@ ko.bindingHandlers.map = {
         //mapTypeControlOptions,
         maxZoom: {
             createOptions: 'maxZoom',
-            bindings: 'draggable'
+            bindings: 'maxZoom'
         },
         minZoom: {
             createOptions: 'minZoom',
@@ -621,8 +654,8 @@ ko.bindingHandlers.marker = {
             bindings: { name: 'animation', vmToObj: { setter: 'setAnimation' } }
         },
         clickable: {
-            createOptions: 'clickable',
-            bindings: { name: 'clickable', vmToObj: { setter: 'setClickable' } }
+            createOptions: { name: 'clickable', type: 'bool' },
+            bindings: { name: 'clickable', type: 'bool', vmToObj: { setter: 'setClickable' } }
         },
         cursor: {
             createOptions: 'cursor',
@@ -633,7 +666,7 @@ ko.bindingHandlers.marker = {
             bindings: { name: 'icon', vmToObj: { setter: 'setIcon' } }
         },
         raiseOnDrag: {
-            createOptions: 'raiseOnDrag'
+            createOptions: { name: 'raiseOnDrag', type: 'bool' }
         },
         shadow: {
             createOptions: 'shadow',
@@ -662,20 +695,20 @@ ko.bindingHandlers.marker = {
             }
         },
         draggable: {
-            createOptions: 'draggable',
+            createOptions: { name: 'draggable', type: 'bool' },
             bindings: { name: 'draggable', vmToObj: { setter: 'setDraggable' } }
         },
         flat: {
-            createOptions: 'flat',
-            bindings: { name: 'flat', vmToObj: { setter: 'setFlat' } }
+            createOptions: { name: 'flat', type: 'bool' },
+            bindings: { name: 'flat', type: 'bool', vmToObj: { setter: 'setFlat' } }
         },
         title: {
             createOptions: 'title',
             bindings: { name: 'title', vmToObj: { setter: 'setTitle' } }
         },
         visible: {
-            createOptions: 'visible',
-            bindings: { name: 'visible', vmToObj: { setter: 'setVisible' } }
+            createOptions: { name: 'visible', type: 'bool' },
+            bindings: { name: 'visible', type: 'bool', vmToObj: { setter: 'setVisible' } }
         },
         zIndex: {
             createOptions: 'zIndex',

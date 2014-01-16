@@ -30,8 +30,8 @@
             bindings: { name: 'animation', vmToObj: { setter: 'setAnimation' } }
         },
         clickable: {
-            createOptions: 'clickable',
-            bindings: { name: 'clickable', vmToObj: { setter: 'setClickable' } }
+            createOptions: { name: 'clickable', type: 'bool' },
+            bindings: { name: 'clickable', type: 'bool', vmToObj: { setter: 'setClickable' } }
         },
         cursor: {
             createOptions: 'cursor',
@@ -42,7 +42,7 @@
             bindings: { name: 'icon', vmToObj: { setter: 'setIcon' } }
         },
         raiseOnDrag: {
-            createOptions: 'raiseOnDrag'
+            createOptions: { name: 'raiseOnDrag', type: 'bool' }
         },
         shadow: {
             createOptions: 'shadow',
@@ -71,20 +71,20 @@
             }
         },
         draggable: {
-            createOptions: 'draggable',
+            createOptions: { name: 'draggable', type: 'bool' },
             bindings: { name: 'draggable', vmToObj: { setter: 'setDraggable' } }
         },
         flat: {
-            createOptions: 'flat',
-            bindings: { name: 'flat', vmToObj: { setter: 'setFlat' } }
+            createOptions: { name: 'flat', type: 'bool' },
+            bindings: { name: 'flat', type: 'bool', vmToObj: { setter: 'setFlat' } }
         },
         title: {
             createOptions: 'title',
             bindings: { name: 'title', vmToObj: { setter: 'setTitle' } }
         },
         visible: {
-            createOptions: 'visible',
-            bindings: { name: 'visible', vmToObj: { setter: 'setVisible' } }
+            createOptions: { name: 'visible', type: 'bool' },
+            bindings: { name: 'visible', type: 'bool', vmToObj: { setter: 'setVisible' } }
         },
         zIndex: {
             createOptions: 'zIndex',

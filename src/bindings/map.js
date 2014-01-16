@@ -96,8 +96,8 @@
         //disableDefaultUI,
         //disableDoubleClickZoom,
         draggable: {
-            createOptions: 'draggable',
-            bindings: 'draggable'
+            createOptions: { name: 'draggable', type: 'bool' },
+            bindings: { name: 'draggable', type: 'bool' }
         },
         //draggableCursor,
         //draggingCursor,
@@ -108,7 +108,7 @@
         //mapTypeControlOptions,
         maxZoom: {
             createOptions: 'maxZoom',
-            bindings: 'draggable'
+            bindings: 'maxZoom'
         },
         minZoom: {
             createOptions: 'minZoom',

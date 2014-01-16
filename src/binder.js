@@ -1,9 +1,13 @@
 ﻿(function () {
     function applyCreateOptions(bindingContext, bindings, options, definition) {
         if (typeof definition === 'string') {
-            ko.google.maps.utils.assignBindingToOptions(bindings, definition, options);
+            ko.google.maps.utils.assignBindingToOptions(bindings, definition, options, undefined, function (value) {
+                return value === undefined ? undefined : ko.google.maps.utils.convertVMToObj(value, definition.type);
+            });
         } else if (typeof definition === 'object') {
-            ko.google.maps.utils.assignBindingToOptions(bindings, definition.name, options, definition.defaultValue, definition.transform);
+            ko.google.maps.utils.assignBindingToOptions(bindings, definition.name, options, definition.defaultValue, definition.transform || function (value) {
+                return value === undefined ? undefined : ko.google.maps.utils.convertVMToObj(value, definition.type);
+            });
         } else if (typeof definition === 'function') {
             definition(bindingContext, bindings, options);
         } else {
@@ -65,12 +69,12 @@
 
         if (definition.vmToObj.setter) {
             subscriptions.addKOSubscription(bindings[definition.name].subscribe(function (value) {
-                applySetter(obj, definition.vmToObj.setter, value);
+                applySetter(obj, definition.vmToObj.setter, ko.google.maps.utils.convertVMToObj(value, definition.type));
             }));
         } else if (typeof obj.setOptions === 'function' && !definition.vmToObj.noOptions) {
             subscriptions.addKOSubscription(bindings[definition.name].subscribe(function (value) {
                 var options = {};
-                options[definition.vmToObj.option || definition.name] = value;
+                options[definition.vmToObj.option || definition.name] = ko.google.maps.utils.convertVMToObj(value, definition.type);
                 obj.setOptions(options);
             }));
         }
@@ -78,6 +82,7 @@
         if (definition.objToVM) {
             subscriptions.addGMListener(google.maps.event.addListener(obj, definition.objToVM.event, function () {
                 var value = applyGetter(obj, definition.objToVM.getter);
+                value = ko.google.maps.utils.convertObjToVM(value, definition.type);
                 bindings[definition.name](value);
             }));
         }
@@ -97,7 +102,7 @@
         if (typeof bindings[event] !== 'function') return;
 
         subscriptions.addGMListener(google.maps.event.addListener(obj, event, function (e) {
-            bindings[event](e);
+            bindings[event](bindingContext.$data, e);
         }));
     }
 

@@ -44,7 +44,7 @@
                         } else if (!isOpen && isShowing) {
                             infoWindow.open(bindingContext.$map, ko.utils.unwrapObservable(bindings.anchor));
                         }
-                        ko.utils.domData.set(infoWindow, 'isOpen', isShowing);
+                        ko.utils.domData.set(infoWindow, 'isOpen', !!isShowing);
                     }));
                     subscriptions.addGMListener(google.maps.event.addListener(infoWindow, 'closeclick', function () {
                         ko.utils.domData.set(infoWindow, 'isOpen', false);
@@ -67,8 +67,8 @@
             }
         },
         disableAutoPan: {
-            createOptions: 'disableAutoPan',
-            bindings: 'disableAutoPan'
+            createOptions: { name: 'disableAutoPan', type: 'bool' },
+            bindings: { name: 'disableAutoPan', type: 'bool' }
         },
         maxWidth: {
             createOptions: { name: 'maxWidth', defaultValue: 0 },
@@ -81,15 +81,6 @@
         position: {
             createOptions: 'position',
             bindings: { name: 'position', vmToObj: { setter: 'setPosition' } }
-        },
-        alignBottom: {
-            createOptions: 'alignBottom'
-        },
-        boxClass: {
-            createOptions: 'boxClass'
-        },
-        infoBoxClearance: {
-            createOptions: 'boxClass'
         }
     }
 };

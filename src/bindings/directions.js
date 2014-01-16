@@ -23,7 +23,7 @@
 
             var options = ko.google.maps.binder.getCreateOptions(bindingContext, bindings, ko.bindingHandlers.directions.binders);
             var directionsRenderer = new google.maps.DirectionsRenderer(options);
-            
+
             var subscriptions = new ko.google.maps.Subscriptions();
             ko.google.maps.binder.bind(bindingContext, bindings, directionsRenderer, subscriptions, ko.bindingHandlers.directions.binders);
 
@@ -45,7 +45,7 @@
         },
         binders: {
             draggable: {
-                createOptions: 'draggable'
+                createOptions: { name: 'draggable', type: 'bool' }
             },
             //hideRouteList
             //infoWindow
@@ -55,20 +55,20 @@
             //preserveViewport
             //routeIndex
             suppressBicyclingLayer: {
-                createOptions: 'suppressBicyclingLayer',
-                bindings: 'suppressBicyclingLayer'
+                createOptions: { name: 'suppressBicyclingLayer', type: 'bool' },
+                bindings: { name: 'suppressBicyclingLayer', type: 'bool' }
             },
             suppressMarkers: {
-                createOptions: 'suppressMarkers',
-                bindings: 'suppressMarkers'
+                createOptions: { name: 'suppressMarkers', type: 'bool' },
+                bindings: { name: 'suppressMarkers', type: 'bool' }
             },
             suppressInfoWindows: {
-                createOptions: 'suppressInfoWindows',
-                bindings: 'suppressInfoWindows'
+                createOptions: { name: 'suppressInfoWindows', type: 'bool' },
+                bindings: { name: 'suppressInfoWindows', type: 'bool' }
             },
             suppressPolylines: {
-                createOptions: 'suppressPolylines',
-                bindings: 'suppressPolylines'
+                createOptions: { name: 'suppressPolylines', type: 'bool' },
+                bindings: { name: 'suppressPolylines', type: 'bool' }
             }
         }
     };

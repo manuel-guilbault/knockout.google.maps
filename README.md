@@ -9,12 +9,14 @@ Supported features (up to now)
 * Map (obviously)
 * Marker (of course)
 * InfoWindow
+* DirectionsRenderer (partially)
 
 And as extensions:
 
 * [MarkerClusterer](https://github.com/manuel-guilbault/knockout.google.maps.clusterer)
+* [InfoBox](https://github.com/manuel-guilbault/knockout.google.maps.infobox)
 
-This project is still in progress, so not all properties are supported right now, and more features are coming (ex: DirectionsRenderer). Contributors are welcome, so in this case just [let me know](mailto:manuel.guilbault@gmail.com).
+This project is still in progress, so not all properties are supported right now, and more features are coming (ex: DirectionsRenderer, map controls, street view). Contributors are welcome, so if you're interested in giving a hand, just [let me know](mailto:manuel.guilbault@gmail.com).
 
 Try it out
 ==========

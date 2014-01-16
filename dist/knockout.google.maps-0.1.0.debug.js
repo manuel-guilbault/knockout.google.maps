@@ -442,7 +442,7 @@ ko.bindingHandlers.map = {
             subscriptions.dispose();
 
             // Clean element copy (so child bindings that added a disposeCallback on it are disposed).
-            ko.utils.domNodeDisposal.cleanNode(elementCopy);
+            ko.cleanNode(elementCopy);
         });
 
         return { controlsDescendantBindings: true };

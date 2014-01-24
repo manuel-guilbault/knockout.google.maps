@@ -57,12 +57,12 @@
             options: {
                 //keepRunner: true,
                 vendor: [
-                    "node_modules/knockout/build/output/knockout-latest.js"
+                    "node_modules/knockout/build/output/knockout-latest.js",
+                    "http://maps.googleapis.com/maps/api/js?sensor=false&extension=.js"
                 ],
-                //helpers: [
-                //    "test/convertHelper.js",
-                //    "test/jasmineExtensions.js"
-                //],
+                helpers: [
+                    "test/jasmine.extensions.js"
+                ],
                 specs: ["test/Spec/**/*Spec.js"]
             },
             build: {

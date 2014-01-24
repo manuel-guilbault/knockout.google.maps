@@ -18,7 +18,7 @@
             // Clear all subscriptions.
             subscriptions.dispose();
 
-            // Clean element copy (so child bindings that added a disposeCallback on it are disposed).
+            // Clean element copy (so child bindings that added a disposeCallback on it or one of its child are disposed).
             ko.cleanNode(elementCopy);
         });
 

@@ -15,9 +15,9 @@
     function updateMapItems(bindingContext, element, newItems) {
         var oldItems = ko.utils.domData.get(element, __ko_gm_itemsKey) || [];
         var subscriptions = ko.utils.domData.get(element, __ko_gm_itemsSubscriptionsKey) || [];
-        var differences = ko.utils.compareArrays(oldItems, newItems);
 
-        var itemSubscriptions;
+        var itemSubscriptions,
+            differences = ko.utils.compareArrays(oldItems, newItems);
         for (var i = 0; i < differences.length; ++i) {
             var difference = differences[i];
             switch (difference.status) {
@@ -39,10 +39,9 @@
     }
 
     function clearMapItems(bindingContext, element) {
-        var items = ko.utils.domData.get(element, __ko_gm_itemsKey) || [];
         var subscriptions = ko.utils.domData.get(element, __ko_gm_itemsSubscriptionsKey) || [];
 
-        for (var i = 0; i < items.length; ++i) {
+        for (var i = 0; i < subscriptions.length; ++i) {
             subscriptions[i].dispose();
         }
     }

@@ -1,5 +1,5 @@
 /*
-*   knockout.google.maps 0.1.0 (2014-01-24)
+*   knockout.google.maps 0.1.0 (2014-01-25)
 *   Created by Manuel Guilbault (https://github.com/manuel-guilbault)
 *
 *   Source: https://github.com/manuel-guilbault/knockout.google.maps
@@ -101,44 +101,46 @@ ko.google = {
     };
 })();
 (function () {
-    ko.google.maps.Subscriptions = function () {
+    var subscriptions = function () {
         this.handlers = [];
     };
 
-    ko.google.maps.Subscriptions.prototype.add = function (handler) {
+    subscriptions.prototype.add = function (handler) {
         if (typeof handler === 'function') {
             this.handlers.push(handler);
         } else if (ko.google.maps.utils.isArray(handler)) {
             Array.prototype.push.apply(this.handlers, handler);
-        } else if (typeof handler === 'object' && handler.prototype === this.prototype) {
+        } else if (typeof handler === 'object' && Object.getPrototypeOf(handler) === subscriptions.prototype) {
             Array.prototype.push.apply(this.handlers, handler.handlers);
         } else {
             throw new TypeError('Invalid subscription');
         }
     };
 
-    ko.google.maps.Subscriptions.prototype.addGMListener = function (listener) {
+    subscriptions.prototype.addGMListener = function (listener) {
         this.handlers.push(function () {
             google.maps.event.removeListener(listener);
         });
     };
 
-    ko.google.maps.Subscriptions.prototype.addKOSubscription = function (subscription) {
+    subscriptions.prototype.addKOSubscription = function (subscription) {
         this.handlers.push(function () {
             subscription.dispose();
         });
     };
 
-    ko.google.maps.Subscriptions.prototype.clear = function () {
+    subscriptions.prototype.clear = function () {
         this.handlers = [];
     };
 
-    ko.google.maps.Subscriptions.prototype.dispose = function () {
+    subscriptions.prototype.dispose = function () {
         for (var i = 0; i < this.handlers.length; ++i) {
             this.handlers[i]();
         }
         this.clear();
     };
+
+    ko.google.maps.Subscriptions = subscriptions;
 })();
 (function () {
     function applyCreateOptions(bindingContext, bindings, options, definition) {
@@ -353,93 +355,107 @@ ko.google = {
         }
     };
 })();
-ko.bindingHandlers.infoWindow = {
-    init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
-        if (bindingContext.$map === undefined) {
-            throw 'infoWindow binding must be used only inside the scope of a map binding.';
-        }
-
-        var bindings = ko.utils.unwrapObservable(valueAccessor());
-
-        var childBindingContext = bindingContext.extend({});
-        ko.applyBindingsToDescendants(childBindingContext, element);
-
-        var options = ko.google.maps.binder.getCreateOptions(bindingContext, bindings, ko.bindingHandlers.infoWindow.binders);
-        options.content = element;
-        var infoWindow = new google.maps.InfoWindow(options);
-
-        var subscriptions = new ko.google.maps.Subscriptions();
-        ko.google.maps.binder.bind(bindingContext, bindings, infoWindow, subscriptions, ko.bindingHandlers.infoWindow.binders);
-
-        var parentSubscriptions = bindingContext.$subscriptions;
-        parentSubscriptions.add(function () {
-            subscriptions.dispose();
-            if (ko.utils.domData.get(infoWindow, 'isOpen')) {
-                infoWindow.close();
-            }
-            ko.utils.domData.clear(infoWindow);
-        });
-
-        return { controlsDescendantBindings: true };
-    },
-    binders: {
-        visible: {
-            bind: function (bindingContext, bindings, infoWindow, subscriptions) {
-                var isOpen = false;
-                if (ko.utils.unwrapObservable(bindings.visible)) {
-                    infoWindow.open(bindingContext.$map, ko.utils.unwrapObservable(bindings.anchor));
-                    isOpen = true;
-                }
-                ko.utils.domData.set(infoWindow, 'isOpen', isOpen);
-
-                if (ko.isObservable(bindings.visible)) {
-                    subscriptions.addKOSubscription(bindings.visible.subscribe(function (isShowing) {
-                        var isOpen = ko.utils.domData.get(infoWindow, 'isOpen');
-                        if (isOpen && !isShowing) {
-                            infoWindow.close();
-                        } else if (!isOpen && isShowing) {
-                            infoWindow.open(bindingContext.$map, ko.utils.unwrapObservable(bindings.anchor));
-                        }
-                        ko.utils.domData.set(infoWindow, 'isOpen', !!isShowing);
-                    }));
-                    subscriptions.addGMListener(google.maps.event.addListener(infoWindow, 'closeclick', function () {
-                        ko.utils.domData.set(infoWindow, 'isOpen', false);
-                        bindings.visible(false);
-                    }));
-                }
-            }
-        },
-        panToSelfWhenShown: {
-            bind: function (bindingContext, bindings, infoWindow, subscriptions) {
-                if (ko.isObservable(bindings.visible)) {
-                    subscriptions.addKOSubscription(bindings.visible.subscribe(function (visible) {
-                        if (ko.utils.unwrapObservable(bindings.panToSelfWhenShown) && visible) {
-                            infoWindow.panToSelf();
-                        }
-                    }));
-                } else if (ko.utils.unwrapObservable(bindings.panToSelfWhenShown) && ko.utils.unwrapObservable(bindings.visible)) {
-                    infoWindow.panToSelf();
-                }
-            }
-        },
-        disableAutoPan: {
-            createOptions: { name: 'disableAutoPan', type: 'bool' },
-            bindings: { name: 'disableAutoPan', type: 'bool' }
-        },
-        maxWidth: {
-            createOptions: { name: 'maxWidth', defaultValue: 0 },
-            bindings: 'maxWidth'
-        },
-        pixelOffset: {
-            createOptions: { name: 'pixelOffset', defaultValue: new google.maps.Size(0, 0) },
-            bindings: 'pixelOffset'
-        },
-        position: {
-            createOptions: 'position',
-            bindings: { name: 'position', vmToObj: { setter: 'setPosition' } }
-        }
+(function () {
+    function isOpen(infoWindow) {
+        return ko.utils.domData.get(infoWindow, 'isOpen');
     }
-};
+
+    function setOpen(infoWindow, isOpen) {
+        ko.utils.domData.set(infoWindow, 'isOpen', !!isOpen);
+    }
+
+    function dispose(infoWindow) {
+        if (isOpen(infoWindow)) {
+            infoWindow.close();
+        }
+        ko.utils.domData.clear(infoWindow);
+    }
+
+    ko.bindingHandlers.infoWindow = {
+        init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+            if (bindingContext.$map === undefined) {
+                throw 'infoWindow binding must be used only inside the scope of a map binding.';
+            }
+
+            var bindings = ko.utils.unwrapObservable(valueAccessor());
+
+            var childBindingContext = bindingContext.extend({});
+            ko.applyBindingsToDescendants(childBindingContext, element);
+
+            var options = ko.google.maps.binder.getCreateOptions(bindingContext, bindings, ko.bindingHandlers.infoWindow.binders);
+            options.content = element;
+            var infoWindow = new google.maps.InfoWindow(options);
+
+            var subscriptions = new ko.google.maps.Subscriptions();
+            ko.google.maps.binder.bind(bindingContext, bindings, infoWindow, subscriptions, ko.bindingHandlers.infoWindow.binders);
+
+            var parentSubscriptions = bindingContext.$subscriptions;
+            parentSubscriptions.add(function () {
+                subscriptions.dispose();
+                dispose(infoWindow);
+            });
+
+            return { controlsDescendantBindings: true };
+        },
+        binders: {
+            visible: {
+                bind: function (bindingContext, bindings, infoWindow, subscriptions) {
+                    var isOpen = false;
+                    if (ko.utils.unwrapObservable(bindings.visible)) {
+                        infoWindow.open(bindingContext.$map, ko.utils.unwrapObservable(bindings.anchor));
+                        isOpen = true;
+                    }
+                    setOpen(infoWindow, isOpen);
+
+                    if (ko.isObservable(bindings.visible)) {
+                        subscriptions.addKOSubscription(bindings.visible.subscribe(function (isShowing) {
+                            var isOpen = isOpen(infoWindow);
+                            if (isOpen && !isShowing) {
+                                infoWindow.close();
+                            } else if (!isOpen && isShowing) {
+                                infoWindow.open(bindingContext.$map, ko.utils.unwrapObservable(bindings.anchor));
+                            }
+                            setOpen(infoWindow, isShowing);
+                        }));
+                        subscriptions.addGMListener(google.maps.event.addListener(infoWindow, 'closeclick', function () {
+                            setOpen(infoWindow, false);
+                            bindings.visible(false);
+                        }));
+                    }
+                }
+            },
+            panToSelfWhenShown: {
+                bind: function (bindingContext, bindings, infoWindow, subscriptions) {
+                    if (ko.isObservable(bindings.visible)) {
+                        subscriptions.addKOSubscription(bindings.visible.subscribe(function (visible) {
+                            if (ko.utils.unwrapObservable(bindings.panToSelfWhenShown) && visible) {
+                                infoWindow.panToSelf();
+                            }
+                        }));
+                    } else if (ko.utils.unwrapObservable(bindings.panToSelfWhenShown) && ko.utils.unwrapObservable(bindings.visible)) {
+                        infoWindow.panToSelf();
+                    }
+                }
+            },
+            disableAutoPan: {
+                createOptions: { name: 'disableAutoPan', type: 'bool' },
+                bindings: { name: 'disableAutoPan', type: 'bool' }
+            },
+            maxWidth: {
+                createOptions: { name: 'maxWidth', defaultValue: 0 },
+                bindings: 'maxWidth'
+            },
+            pixelOffset: {
+                createOptions: { name: 'pixelOffset', defaultValue: new google.maps.Size(0, 0) },
+                bindings: 'pixelOffset'
+            },
+            position: {
+                createOptions: 'position',
+                bindings: { name: 'position', vmToObj: { setter: 'setPosition' } }
+            }
+        }
+    };
+})();
 ko.bindingHandlers.map = {
     init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
         var bindings = ko.utils.unwrapObservable(valueAccessor());
@@ -460,7 +476,7 @@ ko.bindingHandlers.map = {
             // Clear all subscriptions.
             subscriptions.dispose();
 
-            // Clean element copy (so child bindings that added a disposeCallback on it are disposed).
+            // Clean element copy (so child bindings that added a disposeCallback on it or one of its child are disposed).
             ko.cleanNode(elementCopy);
         });
 
@@ -597,9 +613,9 @@ ko.bindingHandlers.map = {
     function updateMapItems(bindingContext, element, newItems) {
         var oldItems = ko.utils.domData.get(element, __ko_gm_itemsKey) || [];
         var subscriptions = ko.utils.domData.get(element, __ko_gm_itemsSubscriptionsKey) || [];
-        var differences = ko.utils.compareArrays(oldItems, newItems);
 
-        var itemSubscriptions;
+        var itemSubscriptions,
+            differences = ko.utils.compareArrays(oldItems, newItems);
         for (var i = 0; i < differences.length; ++i) {
             var difference = differences[i];
             switch (difference.status) {
@@ -621,10 +637,9 @@ ko.bindingHandlers.map = {
     }
 
     function clearMapItems(bindingContext, element) {
-        var items = ko.utils.domData.get(element, __ko_gm_itemsKey) || [];
         var subscriptions = ko.utils.domData.get(element, __ko_gm_itemsSubscriptionsKey) || [];
 
-        for (var i = 0; i < items.length; ++i) {
+        for (var i = 0; i < subscriptions.length; ++i) {
             subscriptions[i].dispose();
         }
     }

@@ -22,6 +22,7 @@
             if (ko.utils.domData.get(infoWindow, 'isOpen')) {
                 infoWindow.close();
             }
+            ko.utils.domData.clear(infoWindow);
         });
 
         return { controlsDescendantBindings: true };

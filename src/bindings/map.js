@@ -3,7 +3,7 @@
         var bindings = ko.utils.unwrapObservable(valueAccessor());
 
         // Take copy of map element (because the google.maps.Map constructor will remove all children when creating the map).
-        var elementCopy = element.cloneNode(true);
+        var elementCopy = ko.google.maps.utils.cloneNode(element, true);
 
         var options = ko.google.maps.binder.getCreateOptions(bindingContext, bindings, ko.bindingHandlers.map.binders);
         var map = new google.maps.Map(element, options);

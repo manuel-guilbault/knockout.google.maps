@@ -1,36 +1,49 @@
 ﻿(function () {
-    function bindMapItem(bindingContext, element, newItem) {
-        var subscriptions = ko.utils.domData.get(newItem, 'subscriptions');
-        if (!subscriptions) {
-            subscriptions = new ko.google.maps.Subscriptions();
-            ko.utils.domData.set(newItem, 'subscriptions', subscriptions);
-        }
+    var __ko_gm_itemsKey = 'ko.google.maps.items';
+    var __ko_gm_itemsSubscriptionsKey = 'ko.google.maps.items.subscriptions';
 
-        var childBindingContext = bindingContext.createChildContext(newItem).extend({ $subscriptions: subscriptions });
-        ko.applyBindingsToDescendants(childBindingContext, element.cloneNode(true));
+    function bindMapItem(bindingContext, element, item, subscriptions) {
+        var elementClone = ko.google.maps.utils.cloneNode(element, true);
+        subscriptions.add(function() {
+            ko.cleanNode(elementClone);
+        });
+
+        var childBindingContext = bindingContext.createChildContext(item).extend({ $subscriptions: subscriptions });
+        ko.applyBindingsToDescendants(childBindingContext, elementClone);
     }
 
-    function unbindMapItem(oldItem) {
-        var subscriptions = ko.utils.domData.get(oldItem, 'subscriptions');
-        if (subscriptions) {
-            subscriptions.dispose();
-        }
-        ko.utils.domData.clear(oldItem);
-    }
-
-    function updateMapItems(bindingContext, element, oldItems, newItems) {
+    function updateMapItems(bindingContext, element, newItems) {
+        var oldItems = ko.utils.domData.get(element, __ko_gm_itemsKey) || [];
+        var subscriptions = ko.utils.domData.get(element, __ko_gm_itemsSubscriptionsKey) || [];
         var differences = ko.utils.compareArrays(oldItems, newItems);
 
+        var itemSubscriptions;
         for (var i = 0; i < differences.length; ++i) {
             var difference = differences[i];
             switch (difference.status) {
                 case 'added':
-                    bindMapItem(bindingContext, element, difference.value);
+                    itemSubscriptions = new ko.google.maps.Subscriptions();
+                    bindMapItem(bindingContext, element, difference.value, itemSubscriptions);
+                    subscriptions.splice(difference.index, 0, itemSubscriptions);
                     break;
+
                 case 'deleted':
-                    unbindMapItem(difference.value);
+                    itemSubscriptions = subscriptions.splice(difference.index, 1);
+                    itemSubscriptions[0].dispose();
                     break;
             }
+        }
+
+        ko.utils.domData.set(element, __ko_gm_itemsKey, newItems.slice(0));
+        ko.utils.domData.set(element, __ko_gm_itemsSubscriptionsKey, subscriptions);
+    }
+
+    function clearMapItems(bindingContext, element) {
+        var items = ko.utils.domData.get(element, __ko_gm_itemsKey) || [];
+        var subscriptions = ko.utils.domData.get(element, __ko_gm_itemsSubscriptionsKey) || [];
+
+        for (var i = 0; i < items.length; ++i) {
+            subscriptions[i].dispose();
         }
     }
 
@@ -39,20 +52,20 @@
             var itemsAccessor = valueAccessor();
 
             var items = ko.utils.unwrapObservable(itemsAccessor);
-            for (var i = 0; i < items.length; ++i) {
-                bindMapItem(bindingContext, element, items[i]);
-            }
+            updateMapItems(bindingContext, element, items);
+
+            var subscriptions = new ko.google.maps.Subscriptions();
 
             if (ko.isObservable(itemsAccessor)) {
-                ko.utils.domData.set(element, 'oldItems', itemsAccessor().slice(0));
-
-                itemsAccessor.subscribe(function () {
-                    var newItems = itemsAccessor();
-                    var oldItems = ko.utils.domData.get(element, 'oldItems');
-                    updateMapItems(bindingContext, element, oldItems, newItems);
-                    ko.utils.domData.set(element, 'oldItems', newItems.slice(0));
-                });
+                subscriptions.addKOSubscription(itemsAccessor.subscribe(function (newItems) {
+                    updateMapItems(bindingContext, element, newItems);
+                }));
             }
+
+            var parentSubscriptions = bindingContext.$subscriptions;
+            parentSubscriptions.add(function () {
+                clearMapItems(bindingContext, element);
+            });
 
             return { controlsDescendantBindings: true };
         }

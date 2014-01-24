@@ -1,5 +1,5 @@
 /*
-*   knockout.google.maps 0.1.0 (2014-01-16)
+*   knockout.google.maps 0.1.0 (2014-01-24)
 *   Created by Manuel Guilbault (https://github.com/manuel-guilbault)
 *
 *   Source: https://github.com/manuel-guilbault/knockout.google.maps
@@ -74,12 +74,30 @@ ko.google = {
         return Object.prototype.toString.call(obj) === '[object Array]';
     }
 
+    /*
+        Because IE8's cloneNode copies expando properties (see http://msdn.microsoft.com/en-us/library/ie/ms536365(v=vs.85).aspx),
+        when an element is cloned, the clone and the original will share the data from ko.utils.domData (which causes issue when disposing
+        dependencies). This method clones an element, then makes sure to find and delete the data store key expando property.
+        This solution is britle and will break if the __ko__ prefix changes.
+    */
+    function cloneNode(element, deep) {
+        var clone = element.cloneNode(deep);
+        for (var key in clone) {
+            if (key.indexOf('__ko__') === 0) {
+                // Since IE8 does not support deleting an expando property, we need to set it to undefined to work around it.
+                clone[key] = undefined;
+            }
+        }
+        return clone;
+    }
+
     ko.google.maps.utils = {
         typeConverters: typeConverters,
         convertObjToVM: convertObjToVM,
         convertVMToObj: convertVMToObj,
         assignBindingToOptions: assignBindingToOptions,
-        isArray: isArray
+        isArray: isArray,
+        cloneNode: cloneNode
     };
 })();
 (function () {
@@ -359,6 +377,7 @@ ko.bindingHandlers.infoWindow = {
             if (ko.utils.domData.get(infoWindow, 'isOpen')) {
                 infoWindow.close();
             }
+            ko.utils.domData.clear(infoWindow);
         });
 
         return { controlsDescendantBindings: true };
@@ -426,7 +445,7 @@ ko.bindingHandlers.map = {
         var bindings = ko.utils.unwrapObservable(valueAccessor());
 
         // Take copy of map element (because the google.maps.Map constructor will remove all children when creating the map).
-        var elementCopy = element.cloneNode(true);
+        var elementCopy = ko.google.maps.utils.cloneNode(element, true);
 
         var options = ko.google.maps.binder.getCreateOptions(bindingContext, bindings, ko.bindingHandlers.map.binders);
         var map = new google.maps.Map(element, options);
@@ -562,38 +581,51 @@ ko.bindingHandlers.map = {
     }
 };
 (function () {
-    function bindMapItem(bindingContext, element, newItem) {
-        var subscriptions = ko.utils.domData.get(newItem, 'subscriptions');
-        if (!subscriptions) {
-            subscriptions = new ko.google.maps.Subscriptions();
-            ko.utils.domData.set(newItem, 'subscriptions', subscriptions);
-        }
+    var __ko_gm_itemsKey = 'ko.google.maps.items';
+    var __ko_gm_itemsSubscriptionsKey = 'ko.google.maps.items.subscriptions';
 
-        var childBindingContext = bindingContext.createChildContext(newItem).extend({ $subscriptions: subscriptions });
-        ko.applyBindingsToDescendants(childBindingContext, element.cloneNode(true));
+    function bindMapItem(bindingContext, element, item, subscriptions) {
+        var elementClone = ko.google.maps.utils.cloneNode(element, true);
+        subscriptions.add(function() {
+            ko.cleanNode(elementClone);
+        });
+
+        var childBindingContext = bindingContext.createChildContext(item).extend({ $subscriptions: subscriptions });
+        ko.applyBindingsToDescendants(childBindingContext, elementClone);
     }
 
-    function unbindMapItem(oldItem) {
-        var subscriptions = ko.utils.domData.get(oldItem, 'subscriptions');
-        if (subscriptions) {
-            subscriptions.dispose();
-        }
-        ko.utils.domData.clear(oldItem);
-    }
-
-    function updateMapItems(bindingContext, element, oldItems, newItems) {
+    function updateMapItems(bindingContext, element, newItems) {
+        var oldItems = ko.utils.domData.get(element, __ko_gm_itemsKey) || [];
+        var subscriptions = ko.utils.domData.get(element, __ko_gm_itemsSubscriptionsKey) || [];
         var differences = ko.utils.compareArrays(oldItems, newItems);
 
+        var itemSubscriptions;
         for (var i = 0; i < differences.length; ++i) {
             var difference = differences[i];
             switch (difference.status) {
                 case 'added':
-                    bindMapItem(bindingContext, element, difference.value);
+                    itemSubscriptions = new ko.google.maps.Subscriptions();
+                    bindMapItem(bindingContext, element, difference.value, itemSubscriptions);
+                    subscriptions.splice(difference.index, 0, itemSubscriptions);
                     break;
+
                 case 'deleted':
-                    unbindMapItem(difference.value);
+                    itemSubscriptions = subscriptions.splice(difference.index, 1);
+                    itemSubscriptions[0].dispose();
                     break;
             }
+        }
+
+        ko.utils.domData.set(element, __ko_gm_itemsKey, newItems.slice(0));
+        ko.utils.domData.set(element, __ko_gm_itemsSubscriptionsKey, subscriptions);
+    }
+
+    function clearMapItems(bindingContext, element) {
+        var items = ko.utils.domData.get(element, __ko_gm_itemsKey) || [];
+        var subscriptions = ko.utils.domData.get(element, __ko_gm_itemsSubscriptionsKey) || [];
+
+        for (var i = 0; i < items.length; ++i) {
+            subscriptions[i].dispose();
         }
     }
 
@@ -602,20 +634,20 @@ ko.bindingHandlers.map = {
             var itemsAccessor = valueAccessor();
 
             var items = ko.utils.unwrapObservable(itemsAccessor);
-            for (var i = 0; i < items.length; ++i) {
-                bindMapItem(bindingContext, element, items[i]);
-            }
+            updateMapItems(bindingContext, element, items);
+
+            var subscriptions = new ko.google.maps.Subscriptions();
 
             if (ko.isObservable(itemsAccessor)) {
-                ko.utils.domData.set(element, 'oldItems', itemsAccessor().slice(0));
-
-                itemsAccessor.subscribe(function () {
-                    var newItems = itemsAccessor();
-                    var oldItems = ko.utils.domData.get(element, 'oldItems');
-                    updateMapItems(bindingContext, element, oldItems, newItems);
-                    ko.utils.domData.set(element, 'oldItems', newItems.slice(0));
-                });
+                subscriptions.addKOSubscription(itemsAccessor.subscribe(function (newItems) {
+                    updateMapItems(bindingContext, element, newItems);
+                }));
             }
+
+            var parentSubscriptions = bindingContext.$subscriptions;
+            parentSubscriptions.add(function () {
+                clearMapItems(bindingContext, element);
+            });
 
             return { controlsDescendantBindings: true };
         }

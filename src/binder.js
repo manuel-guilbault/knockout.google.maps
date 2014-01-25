@@ -1,9 +1,7 @@
 ﻿(function () {
     function applyCreateOptions(bindingContext, bindings, options, definition) {
         if (typeof definition === 'string') {
-            ko.google.maps.utils.assignBindingToOptions(bindings, definition, options, undefined, function (value) {
-                return value === undefined ? undefined : ko.google.maps.utils.convertVMToObj(value, definition.type);
-            });
+            ko.google.maps.utils.assignBindingToOptions(bindings, definition, options);
         } else if (typeof definition === 'object') {
             ko.google.maps.utils.assignBindingToOptions(bindings, definition.name, options, definition.defaultValue, definition.transform || function (value) {
                 return value === undefined ? undefined : ko.google.maps.utils.convertVMToObj(value, definition.type);

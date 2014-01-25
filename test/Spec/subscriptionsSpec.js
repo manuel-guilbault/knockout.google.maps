@@ -28,42 +28,36 @@
     });
     it("can dispose google maps listener", function () {
         var map = new google.maps.Map(document.createElement("div"), { zoom: 10 });
-        var triggered = false;
-
+        var listener = jasmine.createSpy();
+        
         var sut = new ko.google.maps.Subscriptions();
-        sut.addGMListener(google.maps.event.addListener(map, "zoom_changed", function () {
-            triggered = true;
-        }));
+        sut.addGMListener(google.maps.event.addListener(map, "zoom_changed", listener));
 
         sut.dispose();
 
         map.setZoom(12);
-        expect(triggered).toBe(false);
+        expect(listener).not.toHaveBeenCalled();
     });
     it("can dispose knockout subscription", function () {
         var observable = ko.observable(0);
-        var triggered = false;
+        var listener = jasmine.createSpy();
 
         var sut = new ko.google.maps.Subscriptions();
-        sut.addKOSubscription(observable.subscribe(function () {
-            triggered = true;
-        }));
+        sut.addKOSubscription(observable.subscribe(listener));
 
         sut.dispose();
 
         observable(1);
-        expect(triggered).toBe(false);
+        expect(listener).not.toHaveBeenCalled();
     });
     it("can dispose added function", function () {
         var sut = new ko.google.maps.Subscriptions();
-        var called = false;
-        sut.add(function () {
-            called = true;
-        });
+        var handler = jasmine.createSpy();
+        sut.add(handler);
 
         sut.dispose();
 
-        expect(called).toBe(true);
+        expect(handler).toHaveBeenCalled();
     });
     it("clears when disposing", function () {
         var sut = new ko.google.maps.Subscriptions();
@@ -75,14 +69,12 @@
     });
     it("does not dispose when clearing", function () {
         var sut = new ko.google.maps.Subscriptions();
-        var called = false;
-        sut.add(function () {
-            called = true;
-        });
+        var handler = jasmine.createSpy();
+        sut.add(handler);
 
         sut.clear();
 
-        expect(called).toBe(false);
+        expect(handler).not.toHaveBeenCalled();
     });
     it("can clear subscriptions", function () {
         var sut = new ko.google.maps.Subscriptions();

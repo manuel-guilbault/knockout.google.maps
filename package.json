@@ -1,6 +1,6 @@
 ﻿{
     "name": "knockout.google.maps",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "author": "Manuel Guilbault (https://github.com/manuel-guilbault)",
     "description": "Knockout bindings for Google Maps, to make view models completely independent from presentation.",
     "repository": {

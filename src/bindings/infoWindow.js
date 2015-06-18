@@ -43,19 +43,19 @@
         binders: {
             visible: {
                 bind: function (bindingContext, bindings, infoWindow, subscriptions) {
-                    var isOpen = false;
+                    var isInfoWindowOpen = false;
                     if (ko.utils.unwrapObservable(bindings.visible)) {
                         infoWindow.open(bindingContext.$map, ko.utils.unwrapObservable(bindings.anchor));
-                        isOpen = true;
+                        isInfoWindowOpen = true;
                     }
-                    setOpen(infoWindow, isOpen);
+                    setOpen(infoWindow, isInfoWindowOpen);
 
                     if (ko.isObservable(bindings.visible)) {
                         subscriptions.addKOSubscription(bindings.visible.subscribe(function (isShowing) {
-                            var isOpen = isOpen(infoWindow);
-                            if (isOpen && !isShowing) {
+                            var isInfoWindowOpen = isOpen(infoWindow);
+                            if (isInfoWindowOpen && !isShowing) {
                                 infoWindow.close();
-                            } else if (!isOpen && isShowing) {
+                            } else if (!isInfoWindowOpen && isShowing) {
                                 infoWindow.open(bindingContext.$map, ko.utils.unwrapObservable(bindings.anchor));
                             }
                             setOpen(infoWindow, isShowing);
